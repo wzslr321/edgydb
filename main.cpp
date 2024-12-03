@@ -105,9 +105,7 @@ void repl(Database &db) {
             display_help();
             continue;
         }
-        std::vector<std::unique_ptr<Command> > commands;
-        commands.push_back(make_unique<Command>(command));
-        auto result = db.execute_query(Query{std::move(commands)});
+        auto result = db.execute_query(Query(command));
 
         fmt::println("{}", result.message);
     }

@@ -8,14 +8,8 @@
 
 namespace rg = std::ranges;
 
-auto Database::execute_query(const Query &query) -> OperationResult {
-    auto const is_query_valid = rg::find_if(query.commands, [this](const auto &command) {
-        return this->is_command_semantic_valid(command->keyword, command->value);
-    }) != query.commands.end();
-    if (!is_query_valid) {
-        return {"Failure", false};
-    }
-    return {"Success", true};
+Database::Database() {
+    valid_commands = init_commands();
 }
 
 auto Database::init_commands() -> std::vector<std::unique_ptr<Command> > {
@@ -39,4 +33,14 @@ auto Database::is_command_semantic_valid(const std::string &keyword, const std::
     return rg::find_if(matched_command->get()->next, [&next](const auto &command) {
         return next == command->keyword;
     }) != valid_commands.end();
+}
+
+auto Database::execute_query(const Query &query) -> OperationResult {
+    auto const is_query_valid = rg::find_if(query.commands, [this](const auto &command) {
+        return this->is_command_semantic_valid(command->keyword, command->value);
+    }) != query.commands.end();
+    if (!is_query_valid) {
+        return OperationResult("Failure", false);
+    }
+    return OperationResult("Success", true);
 }

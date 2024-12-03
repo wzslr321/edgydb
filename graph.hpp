@@ -9,6 +9,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include <ranges>
 
 using BasicValue = std::variant<int, double, bool, std::string, std::vector<int>, std::vector<std::string>, std::vector<
     bool> >;
@@ -49,13 +50,22 @@ struct Command {
 
 struct Query {
     std::vector<std::unique_ptr<Command> > commands{};
+
+    explicit Query(const std::string &query) {
+        const auto space_separeted_view = query | std::views::split(' ') | std::ranges::to<std::vector<std::string> >();
+
+        // parsing logic
+        for (const auto &word: space_separeted_view) {
+            commands.push_back(std::make_unique<Command>(word));
+        }
+    }
 };
 
 struct OperationResult {
     std::string message;
     bool is_success;
 
-    OperationResult(std::string message, const bool is_success)
+    explicit OperationResult(std::string message, const bool is_success)
         : message(std::move(message)), is_success(is_success) {
     }
 };
@@ -70,10 +80,7 @@ private:
     auto is_command_semantic_valid(const std::string &keyword, const std::string &next) -> bool;
 
 public:
-    explicit Database(
-    ) {
-        valid_commands = init_commands();
-    };
+    explicit Database();
 
     OperationResult execute_query(const Query &query);
 };
