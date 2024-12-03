@@ -51,22 +51,22 @@ struct Command {
 struct Query {
     std::vector<std::unique_ptr<Command> > commands{};
 
-    explicit Query(const std::string &query) {
-        const auto space_separeted_view = query | std::views::split(' ') | std::ranges::to<std::vector<std::string> >();
+    static auto from_string(const std::string &query) -> Query;
+};
 
-        // parsing logic
-        for (const auto &word: space_separeted_view) {
-            commands.push_back(std::make_unique<Command>(word));
-        }
-    }
+enum OperationResultStatus {
+    Success,
+    SyntaxError,
+    ValueError,
+    ExecutionError,
 };
 
 struct OperationResult {
     std::string message;
-    bool is_success;
+    OperationResultStatus status;
 
-    explicit OperationResult(std::string message, const bool is_success)
-        : message(std::move(message)), is_success(is_success) {
+    explicit OperationResult(std::string message, const OperationResultStatus &status)
+        : message(std::move(message)), status(status) {
     }
 };
 

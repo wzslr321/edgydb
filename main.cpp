@@ -2,7 +2,7 @@
 #include <fmt/core.h>
 #include <__algorithm/ranges_contains.h>
 
-#include "graph.hpp"
+#include "database.hpp"
 
 /// Structure of the database consists of nodes and edges, therefore it is a graph.
 /// Database can consist of multiple graphs.
@@ -105,7 +105,7 @@ void repl(Database &db) {
             display_help();
             continue;
         }
-        auto result = db.execute_query(Query(command));
+        auto result = db.execute_query(Query::from_string(command));
 
         fmt::println("{}", result.message);
     }

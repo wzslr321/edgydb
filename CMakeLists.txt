@@ -3,7 +3,7 @@ project(edgydb)
 
 set(CMAKE_CXX_STANDARD 23)
 
-add_executable(edgydb main.cpp graph.cpp graph.hpp
+add_executable(edgydb main.cpp database.cpp database.hpp
 )
 
 include(FetchContent)
