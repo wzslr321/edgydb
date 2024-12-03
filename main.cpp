@@ -78,16 +78,17 @@
 /// TRAVERSE FROM [NODE_NAME]
 ///     | WITH DEPTH=3
 
-void repl();
+void repl(Database &db);
 
 auto main() -> int {
-    repl();
+    auto db = Database();
+    repl(db);
     return 0;
 }
 
 void display_help();
 
-void repl() {
+void repl(Database &db) {
     namespace rg = std::ranges;
 
     fmt::println("EdgyDB v1.0.0");
@@ -104,7 +105,11 @@ void repl() {
             display_help();
             continue;
         }
-        Database::execute_command(command);
+        std::vector<std::unique_ptr<Command> > commands;
+        commands.push_back(make_unique<Command>(command));
+        auto result = db.execute_query(Query{std::move(commands)});
+
+        fmt::println("{}", result.message);
     }
 }
 
