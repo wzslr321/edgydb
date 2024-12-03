@@ -5,7 +5,9 @@ set(CMAKE_CXX_STANDARD 23)
 
 add_executable(edgydb main.cpp
         graph.hpp
-        graph.cpp)
+        graph.cpp
+        database.cpp
+        database.hpp)
 
 include(FetchContent)
 

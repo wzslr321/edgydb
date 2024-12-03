@@ -1,6 +1,7 @@
 //
 // Created by Wiktor Zając on 27/11/2024.
 //
+#pragma once
 
 #ifndef GRAPH_HPP
 #define GRAPH_HPP
@@ -39,7 +40,7 @@ struct OperationResult {
 
 class Database {
 private:
-    std::vector<Graph> graphs;
+    std::vector<Graph> graphs{};
 
 public:
     Database() = default;
