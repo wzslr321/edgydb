@@ -52,37 +52,71 @@ struct Query {
     std::vector<std::unique_ptr<Command> > commands{};
 
     static auto from_string(const std::string &query) -> Query;
+
+    explicit Query(std::vector<std::unique_ptr<Command> > commands)
+        : commands(std::move(commands)) {
+    };
 };
 
-enum OperationResultStatus {
+enum class OperationResultStatus {
     Success,
     SyntaxError,
     ValueError,
     ExecutionError,
 };
 
-struct OperationResult {
+struct QueryResult {
     std::string message;
     OperationResultStatus status;
 
-    explicit OperationResult(std::string message, const OperationResultStatus &status)
+    explicit QueryResult(std::string message, const OperationResultStatus &status)
         : message(std::move(message)), status(status) {
     }
 };
 
+enum class IOResultStatus {
+    Success,
+    Failure,
+};
+
+struct IOResult {
+    std::string message;
+    IOResultStatus status;
+
+    explicit IOResult(std::string message, const IOResultStatus status): message(std::move(message)),
+                                                                         status(status) {
+    }
+};
+
+struct DatabaseConfig {
+    int unsynced_queries_limit{};
+
+    explicit DatabaseConfig(const int unsynced_queries_limit = 10) : unsynced_queries_limit(
+        unsynced_queries_limit) {
+    }
+};
+
 class Database {
-private:
+    DatabaseConfig config{};
+
     std::vector<Graph> graphs{};
     std::vector<std::unique_ptr<Command> > valid_commands{};
+
+    int unsynchronized_queries_count = 0;
+
 
     static auto init_commands() -> std::vector<std::unique_ptr<Command> >;
 
     auto is_command_semantic_valid(const std::string &keyword, const std::string &next) -> bool;
 
-public:
-    explicit Database();
+    auto is_query_valid(const Query &query) -> bool;
 
-    OperationResult execute_query(const Query &query);
+    auto sync_with_storage() -> IOResult;
+
+public:
+    QueryResult execute_query(const Query &query);
+
+    explicit Database(const DatabaseConfig config);
 };
 
 #endif //GRAPH_HPP

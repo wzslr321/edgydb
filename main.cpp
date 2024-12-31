@@ -78,10 +78,11 @@
 /// TRAVERSE FROM [NODE_NAME]
 ///     | WITH DEPTH=3
 
-void repl(Database &db);
+void repl(Database & db);
 
 auto main() -> int {
-    auto db = Database();
+    const auto db_config = DatabaseConfig();
+    auto db = Database(db_config);
     repl(db);
     return 0;
 }
