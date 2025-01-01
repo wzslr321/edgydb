@@ -10,6 +10,7 @@
 #include <variant>
 #include <vector>
 #include <ranges>
+#include <fstream>
 
 using BasicValue = std::variant<int, double, bool, std::string, std::vector<int>, std::vector<std::string>, std::vector<
     bool> >;
@@ -103,7 +104,6 @@ class Database {
     std::vector<std::unique_ptr<Command> > valid_commands{};
 
     int unsynchronized_queries_count = 0;
-
 
     static auto init_commands() -> std::vector<std::unique_ptr<Command> >;
 
