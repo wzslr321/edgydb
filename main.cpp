@@ -3,6 +3,7 @@
 #include <__algorithm/ranges_contains.h>
 
 #include "database.hpp"
+#include "Logger.hpp"
 
 /// Structure of the database consists of nodes and edges, therefore it is a graph.
 /// Database can consist of multiple graphs.
@@ -80,7 +81,28 @@
 
 void repl(Database &db);
 
-auto main() -> int {
+int Logger::trace_level = 0;
+
+auto main(const int argc, char *argv[]) -> int {
+    int trace_level = 0;
+
+    for (int i = 1; i < argc; ++i) {
+        if (std::string arg = argv[i]; arg.rfind("--trace-level=", 0) == 0) {
+            try {
+                std::string level_str = arg.substr(14);
+                trace_level = std::stoi(level_str);
+                if (trace_level < 0) {
+                    throw std::invalid_argument("Trace level cannot be negative.");
+                }
+            } catch (const std::exception &e) {
+                std::cerr << "Invalid trace level value. It should be either 0 or 1. Instead it is: " << arg <<
+                        std::endl;
+                return 1;
+            }
+        }
+    }
+    Logger::set_trace_level(trace_level);
+
     const auto db_config = DatabaseConfig(1);
     auto db = Database(db_config);
     repl(db);

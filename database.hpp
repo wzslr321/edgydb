@@ -12,19 +12,16 @@
 #include <ranges>
 #include <fstream>
 
-using BasicValue = std::variant<int, double, bool, std::string, std::vector<int>, std::vector<std::string>, std::vector<
-    bool> >;
+#include "database.hpp"
+
+using BasicValue = std::variant<int, double, bool, std::string>;
 
 namespace rg = std::ranges;
-
-struct UserDefinedValue {
-    std::vector<std::pair<std::string, BasicValue> > values;
-};
 
 struct Node {
     int id{};
     std::string type;
-    std::variant<BasicValue, UserDefinedValue> data;
+    BasicValue data;
 };
 
 struct Edge {

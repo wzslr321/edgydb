@@ -7,7 +7,9 @@
 #include <iostream>
 #include <__algorithm/ranges_find_if.h>
 
+#include "deserialization.hpp"
 #include "serialization.hpp"
+#include "fmt/compile.h"
 
 namespace rg = std::ranges;
 
@@ -34,38 +36,28 @@ auto Database::init_commands() -> std::vector<std::unique_ptr<Command> > {
     return commands;
 }
 
-Database::Database(const DatabaseConfig config) : config(std::move(config)) {
+Database::Database(const DatabaseConfig config) : config(config) {
+    try {
+        if (std::ifstream file("database_snapshot.json", std::ios::binary); file.is_open()) {
+            std::ostringstream buffer;
+            buffer << file.rdbuf();
+            std::string json = buffer.str();
+            std::erase_if(json, [](unsigned char c) {
+                return std::isspace(c);
+            });
+
+            fmt::println("{}", json);
+            this->graphs = Deserialization::deserialize_graphs(json);
+            std::cout << "Database successfully restored from file." << std::endl;
+        } else {
+            std::cerr << "No snapshot file found. Starting with an empty database." << std::endl;
+        }
+    } catch (const std::exception &e) {
+        std::cerr << "Error during database restoration: " << e.what() << std::endl;
+        std::cerr << "Starting with an empty database." << std::endl;
+    }
+
     valid_commands = init_commands();
-
-    // First graph
-    Graph graph1;
-
-    // Add nodes to the first graph
-    graph1.nodes.push_back({1, "Person", BasicValue{"Alice"}});
-    graph1.nodes.push_back({2, "Person", BasicValue{"Bob"}});
-    graph1.nodes.push_back({3, "City", BasicValue{"New York"}});
-
-    // Add edges to the first graph
-    graph1.edges.push_back({1, 1, 2, "knows"}); // Alice knows Bob
-    graph1.edges.push_back({2, 1, 3, "lives_in"}); // Alice lives in New York
-    graph1.edges.push_back({3, 2, 3, "visited"}); // Bob visited New York
-
-    // Second graph
-    Graph graph2;
-
-    // Add nodes to the second graph
-    graph2.nodes.push_back({4, "Company", BasicValue{"TechCorp"}});
-    graph2.nodes.push_back({5, "Employee", BasicValue{"Charlie"}});
-    graph2.nodes.push_back({6, "Employee", BasicValue{"Diana"}});
-
-    // Add edges to the second graph
-    graph2.edges.push_back({4, 5, 4, "works_at"}); // Charlie works at TechCorp
-    graph2.edges.push_back({5, 6, 4, "colleague"}); // Diana is a colleague of Charlie
-    graph2.edges.push_back({6, 4, 5, "founded"}); // TechCorp was founded by Diana
-
-    // Add graphs to the database
-    graphs.push_back(graph1);
-    graphs.push_back(graph2);
 }
 
 auto Database::is_command_semantic_valid(const std::string &keyword, const std::string &next) -> bool {
