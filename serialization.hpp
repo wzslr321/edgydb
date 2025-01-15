@@ -71,7 +71,7 @@ public:
     static std::string serialize_user_defined_value(const UserDefinedValue &value) {
         std::ostringstream result;
         result << "{";
-        auto &data = value.data;
+        auto &data = value.get_data();
         for (size_t i = 0; i < data.size(); ++i) {
             const auto &[key, value] = data[i];
             result << "\"" << escape_json(key) << "\":" << serialize_value(value);

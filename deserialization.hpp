@@ -88,6 +88,32 @@ class Deserialization {
         throw std::runtime_error("Invalid value in JSON");
     }
 
+    static UserDefinedValue parse_user_defined_value(const std::string &json, size_t &pos) {
+        logger.debug(std::format("Deserialization for UserDefinedValue started at pos {}", pos));
+
+        if (json[pos] != '{') throw std::runtime_error("Expected object for UserDefinedValue");
+        ++pos;
+
+        std::vector<std::pair<std::string, BasicValue> > data;
+        while (pos < json.size() && json[pos] != '}') {
+            std::string key = parse_string(json, pos);
+            if (json[pos] != ':') throw std::runtime_error("Expected ':' in UserDefinedValue");
+            ++pos;
+
+            BasicValue value = parse_value(json, pos);
+            data.emplace_back(key, value);
+
+            if (json[pos] == ',') ++pos;
+        }
+
+        if (pos >= json.size() || json[pos] != '}')
+            throw std::runtime_error("Unterminated UserDefinedValue object");
+        ++pos;
+
+        logger.debug("Deserialization finished for UserDefinedValue");
+        return UserDefinedValue(data);
+    }
+
     static Node parse_node(const std::string &json, size_t &pos) {
         logger.debug(std::format("Deserialization for Node started at pos {}", pos));
         if (json[pos] != '{') throw std::runtime_error("Expected object");
@@ -104,7 +130,11 @@ class Deserialization {
             } else if (key == "type") {
                 node.type = std::get<std::string>(BasicValue(parse_value(json, pos)).data);
             } else if (key == "data") {
-                node.data = parse_value(json, pos);
+                if (json[pos] == '{') {
+                    node.data = parse_user_defined_value(json, pos);
+                } else {
+                    node.data = parse_value(json, pos);
+                }
             }
 
             if (json[pos] == ',') ++pos;

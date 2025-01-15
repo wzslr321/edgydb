@@ -37,9 +37,9 @@ class Seeder {
     static auto create_user_defined_value() -> UserDefinedValue {
         return UserDefinedValue{
             {
-                {"Name", BasicValue("SampleObject")},
-                {"Active", BasicValue(true)},
-                {"Priority", BasicValue(42)}
+                {"name", BasicValue("SampleObject")},
+                {"active", BasicValue(true)},
+                {"priority", BasicValue(42)}
             }
         };
     }

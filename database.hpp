@@ -28,7 +28,36 @@ struct BasicValue {
 };
 
 struct UserDefinedValue {
+private:
     std::vector<std::pair<std::string, BasicValue> > data;
+
+    static void validate_data(const std::vector<std::pair<std::string, BasicValue> > &data) {
+        const auto contains_name = std::ranges::find_if(data, [](const auto &pair) {
+            return pair.first == "name";
+        }) != data.end();
+        if (!contains_name) {
+            throw std::runtime_error("UserDefinedValue must have name specified");
+        }
+    }
+
+public:
+    UserDefinedValue() = default;
+
+    ~UserDefinedValue() = default;
+
+    explicit UserDefinedValue(const std::vector<std::pair<std::string, BasicValue> > &data) : data(data) {
+        validate_data(data);
+        this->data = data;
+    }
+
+    void set_data(const std::vector<std::pair<std::string, BasicValue> > &data) {
+        validate_data(data);
+        this->data = data;
+    }
+
+    [[nodiscard]] const std::vector<std::pair<std::string, BasicValue> > &get_data() const {
+        return data;
+    }
 };
 
 namespace rg = std::ranges;

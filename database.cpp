@@ -45,15 +45,6 @@ auto Database::init_commands() -> std::vector<Command> {
 }
 
 Database::Database(const DatabaseConfig config) : config(config) {
-    Seeder seeder;
-    Graph graph1;
-    Graph graph2;
-
-    seeder.seed_graph(graph1);
-    seeder.seed_graph(graph2);
-
-    this->graphs = {graph1, graph2};
-    /*
     try {
         if (std::ifstream file("database_snapshot.json", std::ios::binary); file.is_open()) {
             std::ostringstream buffer;
@@ -72,7 +63,6 @@ Database::Database(const DatabaseConfig config) : config(config) {
         std::cerr << "Error during database restoration: " << e.what() << std::endl;
         std::cerr << "Starting with an empty database." << std::endl;
     }
-    */
 
     valid_commands = init_commands();
 }
