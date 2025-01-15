@@ -68,6 +68,19 @@ public:
         return result.str();
     }
 
+    static std::string serialize_user_defined_value(const UserDefinedValue &value) {
+        std::ostringstream result;
+        result << "{";
+        auto &data = value.data;
+        for (size_t i = 0; i < data.size(); ++i) {
+            const auto &[key, value] = data[i];
+            result << "\"" << escape_json(key) << "\":" << serialize_value(value);
+            if (i + 1 < data.size()) result << ",";
+        }
+        result << "}";
+        return result.str();
+    }
+
     static std::string serialize_node(const Node &node) {
         logger.debug(std::format("Node serialization started for node with id {}", node.id));
 
@@ -75,7 +88,12 @@ public:
         result << "{";
         result << "\"id\":" << node.id << ",";
         result << R"("type":")" << escape_json(node.type) << "\",";
-        result << "\"data\":" << serialize_value(node.data);
+        result << "\"data\":";
+        if (std::holds_alternative<BasicValue>(node.data)) {
+            result << serialize_value(std::get<BasicValue>(node.data));
+        } else if (std::holds_alternative<UserDefinedValue>(node.data)) {
+            result << serialize_user_defined_value(std::get<UserDefinedValue>(node.data));
+        }
         result << "}";
 
         logger.debug(std::format("Node serialization completed for node with id {}. Result: {}", node.id,

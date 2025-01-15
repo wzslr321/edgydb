@@ -27,12 +27,17 @@ struct BasicValue {
     }
 };
 
+struct UserDefinedValue {
+    std::vector<std::pair<std::string, BasicValue> > data;
+};
+
 namespace rg = std::ranges;
 
 struct Node {
     int id{};
+    // TODO: Possibly removable type - I don't see a point
     std::string type;
-    BasicValue data;
+    std::variant<BasicValue, UserDefinedValue> data;
 };
 
 struct Edge {
