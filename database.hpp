@@ -29,9 +29,10 @@ struct BasicValue {
 
 struct UserDefinedValue {
 private:
-    std::vector<std::pair<std::string, BasicValue> > data;
+    std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > data;
 
-    static void validate_data(const std::vector<std::pair<std::string, BasicValue> > &data) {
+    static void validate_data(
+        const std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > &data) {
         const auto contains_name = std::ranges::find_if(data, [](const auto &pair) {
             return pair.first == "name";
         }) != data.end();
@@ -45,17 +46,19 @@ public:
 
     ~UserDefinedValue() = default;
 
-    explicit UserDefinedValue(const std::vector<std::pair<std::string, BasicValue> > &data) : data(data) {
+    explicit UserDefinedValue(
+        const std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > &data) : data(data) {
         validate_data(data);
         this->data = data;
     }
 
-    void set_data(const std::vector<std::pair<std::string, BasicValue> > &data) {
+    void set_data(const std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > &data) {
         validate_data(data);
         this->data = data;
     }
 
-    [[nodiscard]] const std::vector<std::pair<std::string, BasicValue> > &get_data() const {
+    [[nodiscard]] const std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > &
+    get_data() const {
         return data;
     }
 };
@@ -64,8 +67,6 @@ namespace rg = std::ranges;
 
 struct Node {
     int id{};
-    // TODO: Possibly removable type - I don't see a point
-    std::string type;
     std::variant<BasicValue, UserDefinedValue> data;
 };
 
@@ -145,6 +146,7 @@ struct IOResult {
 
 struct DatabaseConfig {
     int unsynced_queries_limit{};
+    bool from_seed = true;
 
     explicit DatabaseConfig(const int unsynced_queries_limit = 10) : unsynced_queries_limit(
         unsynced_queries_limit) {
@@ -173,6 +175,8 @@ public:
     explicit Database(DatabaseConfig config);
 
     std::unique_ptr<std::vector<Graph> > get_graphs();
+
+    void seed();
 };
 
 #endif //GRAPH_HPP

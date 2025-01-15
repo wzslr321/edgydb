@@ -71,12 +71,28 @@ public:
     static std::string serialize_user_defined_value(const UserDefinedValue &value) {
         std::ostringstream result;
         result << "{";
-        auto &data = value.get_data();
+
+        const auto &data = value.get_data();
         for (size_t i = 0; i < data.size(); ++i) {
-            const auto &[key, value] = data[i];
-            result << "\"" << escape_json(key) << "\":" << serialize_value(value);
-            if (i + 1 < data.size()) result << ",";
+            const auto &[key, val] = data[i];
+            result << "\"" << escape_json(key) << "\":";
+
+            std::visit(
+                [&result]<typename T0>(const T0 &v) {
+                    using T = std::decay_t<T0>;
+                    if constexpr (std::is_same_v<T, BasicValue>) {
+                        result << serialize_value(v);
+                    } else if constexpr (std::is_same_v<T, UserDefinedValue>) {
+                        result << serialize_user_defined_value(v);
+                    }
+                },
+                val);
+
+            if (i + 1 < data.size()) {
+                result << ",";
+            }
         }
+
         result << "}";
         return result.str();
     }
@@ -87,7 +103,6 @@ public:
         std::ostringstream result;
         result << "{";
         result << "\"id\":" << node.id << ",";
-        result << R"("type":")" << escape_json(node.type) << "\",";
         result << "\"data\":";
         if (std::holds_alternative<BasicValue>(node.data)) {
             result << serialize_value(std::get<BasicValue>(node.data));

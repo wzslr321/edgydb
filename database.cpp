@@ -44,7 +44,22 @@ auto Database::init_commands() -> std::vector<Command> {
     return std::move(commands);
 }
 
+auto Database::seed() -> void {
+    Seeder seeder;
+    Graph graph1;
+    Graph graph2;
+    seeder.seed_graph(graph1);
+    seeder.seed_graph(graph2);
+    this->graphs = {graph1, graph2};
+}
+
 Database::Database(const DatabaseConfig config) : config(config) {
+    if (config.from_seed) {
+        this->seed();
+        valid_commands = init_commands();
+        return;
+    }
+
     try {
         if (std::ifstream file("database_snapshot.json", std::ios::binary); file.is_open()) {
             std::ostringstream buffer;

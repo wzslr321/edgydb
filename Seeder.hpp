@@ -16,21 +16,19 @@ class Seeder {
     int edge_counter = 0;
 
     std::vector<std::string> dummy_node_types = {"Person", "Company", "Location"};
-    std::vector<std::string> dummy_person_names = {"Alice", "Bob", "Charlie", "Diana"};
-    std::vector<std::string> dummy_companies = {"TechCorp", "InnovateX", "DataSolutions"};
+    std::vector<std::string> dummy_person_names = {"Remi", "Bob", "Charlie", "Diana"};
+    std::vector<std::string> dummy_companies = {"EvilCorp", "InnovateX", "DataSolutions"};
     std::vector<std::string> dummy_locations = {"New York", "London", "Tokyo"};
+    std::vector<std::string> dummy_graph_names = {"Fishermen", "Policemen", "Firefighters"};
 
     std::vector<std::string> dummy_relations = {"Knows", "WorksFor", "LocatedIn"};
 
-    auto create_basic_node(const std::string &type, const BasicValue &data) -> Node {
-        return Node{++node_counter, type, data};
+
+    auto create_user_defined_node(const UserDefinedValue &data) -> Node {
+        return Node{++node_counter, data};
     }
 
-    auto create_user_defined_node(const std::string &type, const UserDefinedValue &data) -> Node {
-        return Node{++node_counter, type, data};
-    }
-
-    auto create_edge(int from, int to, const std::string &relation) -> Edge {
+    auto create_edge(const int from, const int to, const std::string &relation) -> Edge {
         return Edge{++edge_counter, from, to, relation};
     }
 
@@ -39,23 +37,38 @@ class Seeder {
             {
                 {"name", BasicValue("SampleObject")},
                 {"active", BasicValue(true)},
-                {"priority", BasicValue(42)}
+                {"priority", BasicValue(42)},
+                {
+                    "info", UserDefinedValue{
+                        {
+                            {"name", BasicValue("SampleObjectInfo")},
+                            {"age", BasicValue(15)},
+                            {"mother_name", BasicValue("Karen")},
+                        },
+                    },
+                }
             }
         };
     }
 
 public:
     void seed_graph(Graph &graph, const int num_nodes = 10, const int num_edges = 5) {
+        graph.name = dummy_graph_names[(num_nodes + num_edges) % 2];
+
         for (int i = 0; i < num_nodes; ++i) {
             if (i % 3 == 0) {
-                graph.nodes.push_back(create_basic_node(
-                    "Person", BasicValue(dummy_person_names[i % dummy_person_names.size()])));
+                graph.nodes.push_back(Node{
+                    ++node_counter,
+                    BasicValue(dummy_person_names[i % dummy_person_names.size()])
+                });
             } else if (i % 3 == 1) {
-                graph.nodes.push_back(create_basic_node(
-                    "Company", BasicValue(dummy_companies[i % dummy_companies.size()])));
+                graph.nodes.push_back(Node{
+                    ++node_counter,
+                    BasicValue(dummy_companies[i % dummy_companies.size()])
+                });
             } else {
                 graph.nodes.push_back(create_user_defined_node(
-                    "CustomObject", create_user_defined_value()));
+                    create_user_defined_value()));
             }
         }
         for (int i = 0; i < num_edges; ++i) {

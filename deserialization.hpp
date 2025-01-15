@@ -94,14 +94,19 @@ class Deserialization {
         if (json[pos] != '{') throw std::runtime_error("Expected object for UserDefinedValue");
         ++pos;
 
-        std::vector<std::pair<std::string, BasicValue> > data;
+        std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > data;
         while (pos < json.size() && json[pos] != '}') {
             std::string key = parse_string(json, pos);
             if (json[pos] != ':') throw std::runtime_error("Expected ':' in UserDefinedValue");
             ++pos;
 
-            BasicValue value = parse_value(json, pos);
-            data.emplace_back(key, value);
+            if (json[pos] == '{') {
+                UserDefinedValue value = parse_user_defined_value(json, pos);
+                data.emplace_back(key, value);
+            } else {
+                BasicValue value = parse_value(json, pos);
+                data.emplace_back(key, value);
+            }
 
             if (json[pos] == ',') ++pos;
         }
@@ -127,8 +132,6 @@ class Deserialization {
 
             if (key == "id") {
                 node.id = parse_int(json, pos);
-            } else if (key == "type") {
-                node.type = std::get<std::string>(BasicValue(parse_value(json, pos)).data);
             } else if (key == "data") {
                 if (json[pos] == '{') {
                     node.data = parse_user_defined_value(json, pos);
