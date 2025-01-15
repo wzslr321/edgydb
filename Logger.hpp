@@ -5,14 +5,11 @@
 #ifndef LOGGER_HPP
 #define LOGGER_HPP
 
-#pragma once
-
 #include <string>
 #include <fmt/core.h>
 #include <fmt/color.h>
 
 class Logger {
-private:
     std::string name;
     fmt::rgb name_color;
     static int trace_level;
@@ -21,9 +18,9 @@ private:
         constexpr std::hash<std::string> hasher;
         const size_t hash = hasher(name);
 
-        uint8_t r = static_cast<uint8_t>((hash >> 16) & 0xFF);
-        uint8_t g = static_cast<uint8_t>((hash >> 8) & 0xFF);
-        uint8_t b = static_cast<uint8_t>(hash & 0xFF);
+        auto r = static_cast<uint8_t>((hash >> 16) & 0xFF);
+        auto g = static_cast<uint8_t>((hash >> 8) & 0xFF);
+        auto b = static_cast<uint8_t>(hash & 0xFF);
 
         constexpr uint8_t min_brightness = 100;
         r = std::max(r, min_brightness);
@@ -33,7 +30,7 @@ private:
         return fmt::rgb{r, g, b};
     }
 
-    std::string format_message(const std::string &level, const std::string &message) const {
+    [[nodiscard]] std::string format_message(const std::string &level, const std::string &message) const {
         return fmt::format("[{}] [{}] {}", level, name, message);
     }
 
@@ -70,6 +67,5 @@ public:
         }
     }
 };
-
 
 #endif //LOGGER_HPP

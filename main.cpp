@@ -111,6 +111,14 @@ auto main(const int argc, char *argv[]) -> int {
 
 void display_help();
 
+std::string trim_leading_spaces(const std::string &str) {
+    auto it = std::find_if(str.begin(), str.end(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    });
+    return std::string(it, str.end());
+}
+
+
 void repl(Database &db) {
     namespace rg = std::ranges;
 
@@ -123,6 +131,7 @@ void repl(Database &db) {
         fmt::print("> ");
         std::string command;
         std::getline(std::cin, command);
+        command = trim_leading_spaces(command);
         if (rg::contains(exit_commands, command)) break;
         if (command == "help") {
             display_help();
@@ -130,7 +139,7 @@ void repl(Database &db) {
         }
         auto result = db.execute_query(Query::from_string(command));
 
-        fmt::println("{}", result.message);
+        fmt::println("Status: {}", result.message);
     }
 }
 

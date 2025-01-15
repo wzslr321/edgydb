@@ -6,26 +6,19 @@
 #define DESERIALIZATION_HPP
 
 #include <string>
-#include "database.hpp"
-#include <fstream>
 #include <sstream>
 #include <stdexcept>
 
 #include "Logger.hpp"
-
+#include "database.hpp"
 
 class Deserialization {
     static Logger logger;
 
-    static std::string trim(const std::string &str) {
-        const auto begin = str.find_first_not_of(" \t\n\r");
-        if (begin == std::string::npos) return "";
-        const auto end = str.find_last_not_of(" \t\n\r");
-        return str.substr(begin, end - begin + 1);
-    }
-
     static std::string parse_string(const std::string &json, size_t &pos) {
-        if (json[pos] != '"') throw std::runtime_error("Expected string on pos " + std::to_string(pos));
+        logger.debug(std::format("Deserialization of string started at pos {}", pos));
+        if (json[pos] != '"') throw std::runtime_error(std::format("Expected string on pos {}", pos));
+
         ++pos;
         std::string result;
         while (pos < json.size() && json[pos] != '"') {
@@ -61,14 +54,19 @@ class Deserialization {
     }
 
     static int parse_int(const std::string &json, size_t &pos) {
+        logger.debug(std::format("Deserialization for int started at pos {}", pos));
+
         size_t end_pos;
         const int value = std::stoi(json.substr(pos), &end_pos);
         pos += end_pos;
+
+        logger.debug(std::format("Deserialization for int finished with {}", value));
         return value;
     }
 
     static BasicValue parse_value(const std::string &json, size_t &pos) {
-        while (pos < json.size() && isspace(json[pos])) ++pos; // Skip whitespace
+        logger.debug(std::format("Deserialization for BasicValue started at pos {}", pos));
+        while (pos < json.size() && isspace(json[pos])) ++pos;
 
         if (json[pos] == '"') {
             return BasicValue(parse_string(json, pos));
@@ -78,10 +76,12 @@ class Deserialization {
         }
         if (json.compare(pos, 4, "true") == 0) {
             pos += 4;
+            logger.debug(std::format("Deserialization for BasicValue finished with boolean true"));
             return BasicValue(true);
         }
         if (json.compare(pos, 5, "false") == 0) {
             pos += 5;
+            logger.debug(std::format("Deserialization for BasicValue finished with boolean false"));
             return BasicValue(false);
         }
 
@@ -89,6 +89,7 @@ class Deserialization {
     }
 
     static Node parse_node(const std::string &json, size_t &pos) {
+        logger.debug(std::format("Deserialization for Node started at pos {}", pos));
         if (json[pos] != '{') throw std::runtime_error("Expected object");
         ++pos;
 
@@ -110,10 +111,12 @@ class Deserialization {
         }
         if (pos >= json.size() || json[pos] != '}') throw std::runtime_error("Unterminated object");
         ++pos;
+        logger.debug(std::format("Deserialization finished for node with id {}", node.id));
         return node;
     }
 
     static Edge parse_edge(const std::string &json, size_t &pos) {
+        logger.debug(std::format("Deserialization for Edge started at pos {}", pos));
         if (json[pos] != '{') throw std::runtime_error("Expected object");
         ++pos;
 
@@ -137,10 +140,12 @@ class Deserialization {
         }
         if (pos >= json.size() || json[pos] != '}') throw std::runtime_error("Unterminated object");
         ++pos;
+        logger.debug(std::format("Deserialization for Edge with id {} finished", edge.id));
         return edge;
     }
 
     static Graph parse_graph(const std::string &json, size_t &pos) {
+        logger.info(std::format("Parsing of graph started at pos {}", pos));
         if (json[pos] != '{') throw std::runtime_error("Expected object");
         ++pos;
 
@@ -155,7 +160,7 @@ class Deserialization {
                 ++pos;
                 while (pos < json.size() && json[pos] != ']') {
                     graph.nodes.push_back(parse_node(json, pos));
-                    if (json[pos] == ',') ++pos; // Skip comma
+                    if (json[pos] == ',') ++pos;
                 }
                 if (pos >= json.size() || json[pos] != ']') throw std::runtime_error("Unterminated array");
                 ++pos;
@@ -177,12 +182,15 @@ class Deserialization {
         }
         if (pos >= json.size() || json[pos] != '}') throw std::runtime_error("Unterminated object");
         ++pos;
-        return graph;
+        logger.info(std::format("Parsing finished for graph with name {} containing {} nodes and {} edges", graph.name,
+                                graph.nodes.size(), graph.edges.size()));
+        return std::move(graph);
     }
 
 public:
-    static std::vector<Graph> deserialize_graphs(const std::string &json) {
+    static std::vector<Graph> parse_graphs(const std::string &json) {
         size_t pos = 0;
+        logger.info("Parsing started for graphs");
 
         if (json[pos] != '{') throw std::runtime_error("Expected object");
         ++pos;
@@ -210,7 +218,8 @@ public:
         if (pos >= json.size() || json[pos] != '}') throw std::runtime_error("Unterminated object");
         ++pos;
 
-        return graphs;
+        logger.info(std::format("Parsing finished for {} graphs in total ", graphs.size()));
+        return std::move(graphs);
     }
 };
 

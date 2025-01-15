@@ -1,11 +1,10 @@
 //
 // Created by Wiktor Zając on 01/01/2025.
 //
-#pragma once
-
-#include "database.hpp"
 #ifndef SERIALIZATION_HPP
 #define SERIALIZATION_HPP
+
+#include "database.hpp"
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -15,10 +14,12 @@ class Serialization {
 
 public:
     static std::string escape_json(const std::string &value) {
+        logger.debug(std::format("Escaping JSON for value {}", value));
+
         std::ostringstream escaped;
-        for (const auto &ch: value) {
+        for (const auto ch: value) {
             switch (ch) {
-                case '"': escaped << "\\\"";
+                case '"': escaped << "\"";
                     break;
                 case '\\': escaped << "\\\\";
                     break;
@@ -33,20 +34,23 @@ public:
                 case '\t': escaped << "\\t";
                     break;
                 default:
+                    // Escape non printable characters
                     if (ch >= 0 && ch <= 31) {
-                        escaped << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(ch);
+                        escaped << std::format("\\u{:04x}", static_cast<int>(ch));
                     } else {
                         escaped << ch;
                     }
             }
         }
+
+        logger.debug(std::format("Escaped JSON {}", escaped.str()));
         return escaped.str();
     }
 
     static std::string serialize_value(const BasicValue &value) {
         logger.debug(std::format("Value serialization started for {}", value.toString()));
 
-        auto data = value.data;
+        const auto data = value.data;
         std::ostringstream result;
         if (std::holds_alternative<int>(data)) {
             result << std::get<int>(data);
@@ -70,9 +74,8 @@ public:
         std::ostringstream result;
         result << "{";
         result << "\"id\":" << node.id << ",";
-        result << "\"type\":\"" << escape_json(node.type) << "\",";
-        result << "\"data\":";
-        result << serialize_value(node.data);
+        result << R"("type":")" << escape_json(node.type) << "\",";
+        result << "\"data\":" << serialize_value(node.data);
         result << "}";
 
         logger.debug(std::format("Node serialization completed for node with id {}. Result: {}", node.id,
@@ -88,7 +91,7 @@ public:
         result << "\"id\":" << edge.id << ",";
         result << "\"from\":" << edge.from << ",";
         result << "\"to\":" << edge.to << ",";
-        result << "\"relation\":\"" << escape_json(edge.relation) << "\"";
+        result << R"("relation":")" << escape_json(edge.relation) << "\"";
         result << "}";
 
         logger.debug(std::format("Edge serialization completed for edge with id {}. Result: {}", edge.id,
@@ -96,42 +99,40 @@ public:
         return result.str();
     }
 
-    static std::string serialize_graph(const std::unique_ptr<Graph> &graph) {
-        logger.debug(std::format("Graph serialization started for graph with name {}", graph->name));
+    static std::string serialize_graph(const Graph &graph) {
+        logger.debug(std::format("Graph serialization started for graph with name {}", graph.name));
 
         std::ostringstream result;
         result << "{";
-        result << "\"name\":" << "\"" << graph->name << "\",";
+        result << "\"name\":" << "\"" << graph.name << "\",";
         result << "\"nodes\":[";
-        for (size_t i = 0; i < graph->nodes.size(); ++i) {
-            result << serialize_node(graph->nodes[i]);
-            if (i + 1 < graph->nodes.size()) result << ",";
+        for (size_t i = 0; i < graph.nodes.size(); ++i) {
+            result << serialize_node(graph.nodes[i]);
+            if (i + 1 < graph.nodes.size()) result << ",";
         }
         result << "],";
         result << "\"edges\":[";
-        for (size_t i = 0; i < graph->edges.size(); ++i) {
-            result << serialize_edge(graph->edges[i]);
-            if (i + 1 < graph->edges.size()) result << ",";
+        for (size_t i = 0; i < graph.edges.size(); ++i) {
+            result << serialize_edge(graph.edges[i]);
+            if (i + 1 < graph.edges.size()) result << ",";
         }
-        result << "]";
-        result << "}";
+        result << "]" << "}";
 
-        logger.info(std::format("Graph serialization completed for graph with name {}", graph->name));
+        logger.info(std::format("Graph serialization completed for graph with name {}", graph.name));
         return result.str();
     }
 
     static std::string serialize_database(Database &database) {
         std::ostringstream result;
 
-        auto graphs = database.get_graphs();
+        auto const graphs = database.get_graphs();
         result << "{";
         result << "\"graphs\":[";
-        for (size_t i = 0; i < graphs.size(); ++i) {
-            result << Serialization::serialize_graph(graphs[i]);
-            if (i + 1 < graphs.size()) result << ",";
+        for (size_t i = 0; i < graphs->size(); ++i) {
+            result << serialize_graph((*graphs)[i]);
+            if (i + 1 < graphs->size()) result << ",";
         }
-        result << "]";
-        result << "}";
+        result << "]" << "}";
 
         return result.str();
     }

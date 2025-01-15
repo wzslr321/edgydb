@@ -4,6 +4,7 @@
 
 #include "database.hpp"
 
+#include <fstream>
 #include <iostream>
 #include <__algorithm/ranges_find_if.h>
 
@@ -23,17 +24,23 @@ auto Query::from_string(const std::string &query) -> Query {
     return Query{std::move(commands)};
 }
 
-auto Database::init_commands() -> std::vector<std::unique_ptr<Command> > {
+template<std::predicate<const Node &> Predicate>
+auto Graph::find_nodes_where(Predicate predicate) -> std::vector<Node> {
+    auto filtered_nodes = nodes | std::views::filter(predicate);
+    return std::vector<Node>(filtered_nodes.begin(), filtered_nodes.end());
+}
+
+auto Database::init_commands() -> std::vector<Command> {
     constexpr auto available_commands_count = 3;
 
-    std::vector<std::unique_ptr<Command> > commands;
+    std::vector<Command> commands;
     commands.reserve(available_commands_count);
 
-    commands.push_back(std::make_unique<Command>("SELECT"));
-    commands.push_back(std::make_unique<Command>("WHERE"));
-    commands.push_back(std::make_unique<Command>("CREATE"));
+    commands.emplace_back("SELECT");
+    commands.emplace_back("WHERE");
+    commands.emplace_back("CREATE");
 
-    return commands;
+    return std::move(commands);
 }
 
 Database::Database(const DatabaseConfig config) : config(config) {
@@ -46,8 +53,7 @@ Database::Database(const DatabaseConfig config) : config(config) {
                 return std::isspace(c);
             });
 
-            fmt::println("{}", json);
-            this->graphs = Deserialization::deserialize_graphs(json);
+            this->graphs = std::move(Deserialization::parse_graphs(json));
             std::cout << "Database successfully restored from file." << std::endl;
         } else {
             std::cerr << "No snapshot file found. Starting with an empty database." << std::endl;
@@ -60,23 +66,19 @@ Database::Database(const DatabaseConfig config) : config(config) {
     valid_commands = init_commands();
 }
 
-auto Database::get_graphs() -> std::vector<std::unique_ptr<Graph> > {
-    auto graphs_view = this->graphs | std::views::transform([](Graph graph) {
-        return std::make_unique<Graph>(graph);
-    });
-    std::vector<std::unique_ptr<Graph> > graphs(graphs_view.begin(), graphs_view.end());
-
-    return graphs;
+auto Database::get_graphs() -> std::unique_ptr<std::vector<Graph> > {
+    return std::make_unique<std::vector<Graph> >(this->graphs);
 }
 
 auto Database::is_command_semantic_valid(const std::string &keyword, const std::string &next) -> bool {
     const auto matched_command = rg::find_if(valid_commands, [&keyword](const auto &command) {
-        return keyword == command->keyword;
+        return keyword == command.keyword;
     });
     if (matched_command == valid_commands.end()) return false;
-    return rg::find_if(matched_command->get()->next, [&next](const auto &command) {
+
+    return rg::find_if(matched_command->next, [&next](const auto &command) {
         return next == command->keyword;
-    }) != valid_commands.end();
+    }) != matched_command->next.end();
 }
 
 auto Database::is_query_valid(const Query &query) -> bool {
@@ -106,8 +108,25 @@ auto Database::sync_with_storage() -> IOResult {
 
 
 auto Database::execute_query(const Query &query) -> QueryResult {
+    /*
     if (!is_query_valid(query)) {
-        return QueryResult("Failure", OperationResultStatus::SyntaxError);
+        return QueryResult("validation failure", OperationResultStatus::SyntaxError, std::nullopt);
+    }
+    */
+
+    if (query.commands.empty()) {
+        return QueryResult("commands are empty", OperationResultStatus::ValueError, std::nullopt);
+    }
+    const auto &commands = query.commands;
+
+    if (const auto &command = commands.front(); command->keyword == "SELECT") {
+        const auto found = this->graphs[0].find_nodes_where([](const auto &node) {
+            return node.id > 1;
+        });
+        auto result = QueryResultData{std::make_unique<std::vector<Node> >(found)};
+
+        return QueryResult("Success", OperationResultStatus::Success, std::move(result));
+    } else if (command->keyword == "WHERE") {
     }
 
     this->unsynchronized_queries_count += 1;
@@ -118,9 +137,10 @@ auto Database::execute_query(const Query &query) -> QueryResult {
                 break;
             default:
                 return QueryResult("Failed to synchronize storage.Error: " + result.message,
-                                   OperationResultStatus::ExecutionError);
+                                   OperationResultStatus::ExecutionError, std::nullopt);
         }
     }
 
-    return QueryResult("Success", OperationResultStatus::Success);
+    return QueryResult("Success", OperationResultStatus::Success, std::nullopt);
 }
+
