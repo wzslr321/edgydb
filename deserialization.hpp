@@ -71,18 +71,18 @@ class Deserialization {
         while (pos < json.size() && isspace(json[pos])) ++pos; // Skip whitespace
 
         if (json[pos] == '"') {
-            return parse_string(json, pos);
+            return BasicValue(parse_string(json, pos));
         }
         if (isdigit(json[pos]) || json[pos] == '-') {
-            return parse_int(json, pos);
+            return BasicValue(parse_int(json, pos));
         }
         if (json.compare(pos, 4, "true") == 0) {
             pos += 4;
-            return true;
+            return BasicValue(true);
         }
         if (json.compare(pos, 5, "false") == 0) {
             pos += 5;
-            return false;
+            return BasicValue(false);
         }
 
         throw std::runtime_error("Invalid value in JSON");
@@ -101,7 +101,7 @@ class Deserialization {
             if (key == "id") {
                 node.id = parse_int(json, pos);
             } else if (key == "type") {
-                node.type = std::get<std::string>(parse_value(json, pos));
+                node.type = std::get<std::string>(BasicValue(parse_value(json, pos)).data);
             } else if (key == "data") {
                 node.data = parse_value(json, pos);
             }
@@ -130,7 +130,7 @@ class Deserialization {
             } else if (key == "to") {
                 edge.to = parse_int(json, pos);
             } else if (key == "relation") {
-                edge.relation = std::get<std::string>(parse_value(json, pos));
+                edge.relation = std::get<std::string>(BasicValue(parse_value(json, pos)).data);
             }
 
             if (json[pos] == ',') ++pos;
@@ -167,6 +167,9 @@ class Deserialization {
                     if (json[pos] == ',') ++pos;
                 }
                 if (pos >= json.size() || json[pos] != ']') throw std::runtime_error("Unterminated array");
+                ++pos;
+            } else if (key == "name") {
+                graph.name = parse_string(json, pos);
                 ++pos;
             }
 

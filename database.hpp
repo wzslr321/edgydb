@@ -13,8 +13,24 @@
 #include <fstream>
 
 #include "database.hpp"
+#include "fmt/core.h"
 
-using BasicValue = std::variant<int, double, bool, std::string>;
+struct BasicValue {
+    std::variant<int, double, bool, std::string> data;
+
+    std::string toString() const {
+        return std::visit([]<typename T0>(const T0 &arg) -> std::string {
+            using T = std::decay_t<T0>;
+            if constexpr (std::is_same_v<T, bool>) {
+                return arg ? "true" : "false";
+            } else if constexpr (std::is_same_v<T, std::string>) {
+                return arg;
+            } else {
+                return std::to_string(arg);
+            }
+        }, this->data);
+    }
+};
 
 namespace rg = std::ranges;
 
@@ -32,6 +48,8 @@ struct Edge {
 };
 
 struct Graph {
+    std::string name;
+
     std::vector<Node> nodes;
     std::vector<Edge> edges;
 };
@@ -114,6 +132,8 @@ public:
     QueryResult execute_query(const Query &query);
 
     explicit Database(const DatabaseConfig config);
+
+    std::vector<std::unique_ptr<Graph> > get_graphs();
 };
 
 #endif //GRAPH_HPP

@@ -60,6 +60,15 @@ Database::Database(const DatabaseConfig config) : config(config) {
     valid_commands = init_commands();
 }
 
+auto Database::get_graphs() -> std::vector<std::unique_ptr<Graph> > {
+    auto graphs_view = this->graphs | std::views::transform([](Graph graph) {
+        return std::make_unique<Graph>(graph);
+    });
+    std::vector<std::unique_ptr<Graph> > graphs(graphs_view.begin(), graphs_view.end());
+
+    return graphs;
+}
+
 auto Database::is_command_semantic_valid(const std::string &keyword, const std::string &next) -> bool {
     const auto matched_command = rg::find_if(valid_commands, [&keyword](const auto &command) {
         return keyword == command->keyword;
@@ -85,14 +94,7 @@ auto Database::sync_with_storage() -> IOResult {
             return IOResult("Failed to open file for writing", IOResultStatus::Failure);
         }
 
-        file << "{";
-        file << "\"graphs\":[";
-        for (size_t i = 0; i < graphs.size(); ++i) {
-            file << Serialization::serialize_graph(graphs[i]);
-            if (i + 1 < graphs.size()) file << ",";
-        }
-        file << "]";
-        file << "}";
+        file << Serialization::serialize_database(*this);
         file.close();
 
         unsynchronized_queries_count = 0;
