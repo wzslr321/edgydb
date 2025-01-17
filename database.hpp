@@ -109,10 +109,11 @@ struct IOResult {
 
 struct DatabaseConfig {
     int unsynced_queries_limit{};
-    bool from_seed = false;
+    bool from_seed{};
 
-    explicit DatabaseConfig(const int unsynced_queries_limit = 10) : unsynced_queries_limit(
-        unsynced_queries_limit) {
+    explicit DatabaseConfig(const int unsynced_queries_limit = 10,
+                            const bool from_seed = false) : unsynced_queries_limit(
+                                                                unsynced_queries_limit), from_seed(from_seed) {
     }
 };
 
@@ -138,6 +139,8 @@ class Query {
 
     auto handle_insert_node(Database &db) const -> void;
 
+    auto handle_insert_complex_node(Database &db) const -> void;
+
     auto handle_insert_edge(Database &db) const -> void;
 
     auto handle_select(Database &db) const -> void;
@@ -149,7 +152,7 @@ public:
 
     [[nodiscard]] auto get_commands() const -> const std::vector<Command> &;
 
-    static auto from_string(const std::string &query) -> Query;
+    static auto from_string(const std::string &query) -> std::optional<Query>;
 };
 
 class Database {
@@ -165,6 +168,8 @@ class Database {
     auto sync_with_storage() -> IOResult;
 
 public:
+    int current_id = 0;
+
     explicit Database(DatabaseConfig config);
 
     ~Database();
@@ -178,6 +183,8 @@ public:
     auto add_graph(Graph &graph) -> void;
 
     auto set_graph(Graph &graph) -> void;
+
+    auto add_node(Node &node) const -> void;
 
     auto seed() -> void;
 };

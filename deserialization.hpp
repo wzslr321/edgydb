@@ -10,7 +10,7 @@
 
 #include "Logger.hpp"
 
-class Deserialization {
+struct Deserialization {
     // TODO: do that eveywehre else
     inline static auto logger = Logger("Deserialization");
 
@@ -220,7 +220,6 @@ class Deserialization {
         return std::move(graph);
     }
 
-public:
     static std::vector<Graph> parse_graphs(const std::string &json) {
         size_t pos = 0;
         logger.info("Parsing started for graphs");

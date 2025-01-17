@@ -9,6 +9,96 @@ void repl(Database &db);
 
 int Logger::trace_level = 0;
 
+// Baza danych przechowywana jest w postaci pliku `.json`
+// Plik ten będzie znajdywał się pod nazwą 'database_snapshot.json` w folderze,
+// z którego uruchamiany jest program. W przypadku uruchamiania poprzez IDE Clion,
+// będzie to folder 'cmake-build-debug' (zakładając uruchamianie w profilu debug)
+//
+// Struktura bazy składa się z dowolnej ilości grafów, przechowywanych w pliku .json
+// jako "graph". Każdy graf posiada swoją nazwę przechowywaną w polu "name".
+// Dodatkowo każdy graf zawiera pola "nodes" i "edges" (będące tablicami),
+// gdzie pojedyńczy node odpowiada za przechowywanie danych, a edge za
+// przechowywanie połączeń między nimi.
+//
+// Edge zawiera jedynie pola "from" oraz "to", więc jest to skierowany graf nieważony.
+// Node zawiera pole id przypisywane automatycznie (poprzez inkrementację) oraz pole
+// data, które może zawierać typ prymitywny - int/double/boolean/string, lub
+// strukturę zdefiniowaną poprzez użytkownika, która składa się z par string:(int/double/boolean/string)
+// czyli klucz - wartość.
+//
+// Przykładowa baza danych:
+// {
+//    "graphs": [
+//      {
+//        "name": "Policemen",
+//        "nodes": [
+//          {
+//            "id": 1,
+//            "data": "Mariusz"
+//          },
+//          {
+//            "id": 2,
+//            "data": {
+//              "name": "Szeregowy",
+//              "imie": "Marek"
+//              "emeryt": false,
+//              "wiek": 42
+//            }
+//          }
+//        ]
+//      }
+//    ]
+//  }
+//
+// Baza operuje na jednym z grafów, który na starcie programu trzeba wybrać.
+// Potem w trakcie trwania programu można go także oczywiście zmienić.
+//
+// Wspierane zapytania:
+//
+// Wybiera graf, na którym będą operować kolejne komendy, o ile taki istnieje. Przykład: USE firefighters
+// USE [nazwa] ✅
+//
+// Tworzy graf o nazwie [nazwa]. Przykład: CREATE firefighters
+// CREATE GRAPH [nazwa] ✅
+//
+// Dodaje node zawierający prymitywne dane. Przykład: INSERT NODE "Mariusz"
+// INSERT NODE [data]  ✅
+//
+// Dodaje node zawierającego dane o strukturze zdefiniowanej przez użytkownika, gdzie pole
+// "name" jest polem wymaganym.
+// Przykład: INSERT NODE COMPLEX {"name":"pracownik", "wiek":40, "pensja": 1000, "imię":"Marcin"}
+// INSERT NODE COMPLEX {"name":"[nazwa]", "[pole1]":[wartość1], "[pole2]":[wartość2]} ❌
+// Każde pole oprócz name, może być kolejnym typem danych o strukturze
+// zdefiniowanej przez użytkownika!
+// Przykład: INSERT NODE COMPLEX {"name":"pracownik", "wiek":40, "pensja": 1000, "imię":"Marcin", "przyjaciel": {"name":"pracownik", "wiek":42, "pensja": 1200, "imię":"Paweł"}}
+//
+// Dodaje połączenie między node'ami, bazując na przekazanym ich id. Przykład: INSERT EDGE FROM 1 to 2
+// INSERT EDGE FROM [node.id] TO [node.id] ❌
+//
+// Aktualizuje dane przechowywane w node o danym id na pryumitywne dane. Przykład: UPDATE NODE 1 TO "Krzysztof"
+// UPDATE NODE [node.id] TO [data] ❌
+//
+// Wyświetla dane zawarte w node o danym id. Przykład: SELECT NODE 1
+// SELECT NODE [node.id] ❌
+//
+// Wyświetla wszystkie node wraz z danymi, które spełniają dany warunek.
+// Przykład: SELECT NODE WHERE "pozycja" EQ "menadżer"
+// SELECT NODE WHERE [nazwa_pola] EQ/NEQ [wartość] ❌
+// Powyższa komenda może zawierać dodatkowe warunki oddzielone poprzez AND lub OR
+// Przykład:
+// SELECT NODE WHERE "pozycja" EQ "menadżer" AND "wiek" NEQ 40 AND "profesja" EQ "informatyk" ❌
+//
+// Zwraca true/false w zależności od tego czy istnieje połączenie (niebezpośrednie) między node'ami o podanych id
+// Przykład: IS 2 CONNECTED TO 3
+// IS [node.id] CONNECTED TO [node.id] ❌
+//
+// Zwraca true/false w zależności od tego czy istnieje połączenie pośrednie między node'ami o podanych id
+// Przykład: IS 2 CONNECTED DIRECTLY TO 3
+// IS [node.id] CONNECTED DIRECTLY TO [node.id] ❌
+//
+//
+// Baza dancyh zapisuje swój stan przy zamknięciu programu oraz po wykonaniu N zapytań
+// gdzie N jest wartością przekazywaną do konfiguracji bazy danych - klasa DatabaseConfig.
 auto main(const int argc, char *argv[]) -> int {
     int trace_level = 0;
 
@@ -29,13 +119,14 @@ auto main(const int argc, char *argv[]) -> int {
     }
     Logger::set_trace_level(trace_level);
 
-    const auto db_config = DatabaseConfig(100);
+    const auto db_config = DatabaseConfig(100, false);
     auto db = Database(db_config);
     repl(db);
     return 0;
 }
 
 void display_help();
+
 
 std::string trim_leading_spaces(const std::string &str) {
     const auto it = std::ranges::find_if(str, [](const unsigned char ch) {
@@ -63,7 +154,9 @@ void repl(Database &db) {
             display_help();
             continue;
         }
-        db.execute_query(Query::from_string(command));
+        if (auto query = Query::from_string(command); query.has_value()) {
+            db.execute_query(query.value());
+        }
     }
 }
 

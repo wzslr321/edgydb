@@ -8,10 +8,12 @@
 #include <iostream>
 #include <ranges>
 #include <algorithm>
+#include <numeric>
 
 #include "deserialization.hpp"
 #include "Seeder.hpp"
 #include "serialization.hpp"
+#include "Utils.hpp"
 
 namespace rg = std::ranges;
 
@@ -24,6 +26,15 @@ auto Graph::find_nodes_where(Predicate predicate) -> std::vector<Node> {
 
 auto Database::set_graph(Graph &graph) -> void {
     this->current_graph = &graph;
+}
+
+auto Database::add_node(Node &node) const -> void {
+    if (this->current_graph == nullptr) {
+        std::cerr << "To execute queries first specify graph with USE command" << std::endl;
+        return;
+    }
+    logger.info(std::format("Adding node with id {} to the graph with name {}", node.id, this->current_graph->name));
+    this->current_graph->nodes.emplace_back(node);
 }
 
 auto Database::seed() -> void {
@@ -127,7 +138,7 @@ auto Database::execute_query(const Query &query) -> void {
 Query::Query(std::vector<Command> commands) : commands(std::move(commands)) {
 }
 
-auto Query::from_string(const std::string &query) -> Query {
+auto Query::from_string(const std::string &query) -> std::optional<Query> {
     const auto words = query | std::views::split(' ') | std::ranges::to<std::vector<std::string> >();
 
     if (words.size() < 2) {
@@ -140,7 +151,8 @@ auto Query::from_string(const std::string &query) -> Query {
             commands.emplace_back(words[0], words[1]);
             return Query(std::move(commands));
         }
-        throw std::invalid_argument("Only USE command can have a single argument");
+        std::cerr << "Only USE command can have a single argument";
+        return std::nullopt;
     }
 
     if (words.size() == 3) {
@@ -149,7 +161,8 @@ auto Query::from_string(const std::string &query) -> Query {
                 commands.emplace_back("CREATE GRAPH", words[2]);
                 return Query(std::move(commands));
             }
-            throw std::invalid_argument("CREATE command support only GRAPH and NODE");
+            std::cerr << "CREATE command only support GRAPH argument" << std::endl;
+            return std::nullopt;
         }
         if (words[0] == "INSERT") {
             if (words[1] == "NODE" || words[1] == "EDGE") {
@@ -173,6 +186,18 @@ auto Query::from_string(const std::string &query) -> Query {
             throw std::invalid_argument("SELECT command support only NODE");
         }
         throw std::invalid_argument("Only CREATE, UPDATE, SELECT can consist of two arguments");
+    }
+
+    if (words.size() >= 4) {
+        if (words[0] == "INSERT" && words[1] == "NODE" && words[2] == "COMPLEX") {
+            auto rest = std::accumulate(words.begin() + 3, words.end(), std::string{},
+                                        [](const std::string &a, const std::string &b) {
+                                            return a.empty() ? b : a + " " + b;
+                                        });
+            commands.emplace_back("INSERT NODE COMPLEX", Utils::minifyJson(rest));
+            return Query(std::move(commands));
+        }
+        throw std::invalid_argument("Invalid query");
     }
 
     // SELECT NODE WHERE id >/</==
@@ -213,10 +238,11 @@ auto Query::handle_use(Database &db) const -> void {
 
     if (it != graphs.end()) {
         logger.info(std::format("Graph found: {}", it->name));
+        db.current_id = it->nodes.size();
         db.set_graph(*it);
     } else {
         logger.error("Graph not found.");
-        throw std::runtime_error("Graph not found.");
+        std::cerr << "Graph not found. If you want to create it, use CREATE GRAPH command" << std::endl;
     }
 }
 
@@ -228,6 +254,22 @@ auto Query::handle_create_graph(Database &db) const -> void {
 
 auto Query::handle_insert_node(Database &db) const -> void {
     logger.debug("INSERT NODE started");
+    size_t pos = 0;
+    auto value = Deserialization::parse_value(this->commands.front().value, pos);
+    Node node = {++db.current_id, value};
+    db.add_node(node);
+}
+
+auto Query::handle_insert_complex_node(Database &db) const -> void {
+    logger.debug("INSERT NODE COMPLEX started");
+    try {
+        size_t pos = 0;
+        auto value = Deserialization::parse_user_defined_value(this->commands.front().value, pos);
+        Node node = {++db.current_id, value};
+        db.add_node(node);
+    } catch (std::runtime_error &e) {
+        std::cerr << "Failed to parse query. Value is not a proper JSON" << std::endl;
+    }
 }
 
 auto Query::handle_insert_edge(Database &db) const -> void {
@@ -253,6 +295,9 @@ auto Query::handle(Database &db) const -> void {
     }
     if (first_command.keyword == "INSERT NODE") {
         return handle_insert_node(db);
+    }
+    if (first_command.keyword == "INSERT NODE COMPLEX") {
+        return handle_insert_complex_node(db);
     }
     if (first_command.keyword == "INSERT EDGE") {
         return handle_insert_edge(db);

@@ -8,6 +8,7 @@ add_executable(edgydb main.cpp database.cpp database.hpp
         deserialization.hpp
         Logger.hpp
         Seeder.hpp
+        Utils.hpp
 )
 
 include(FetchContent)
