@@ -137,9 +137,7 @@ void repl(Database &db) {
             display_help();
             continue;
         }
-        auto result = db.execute_query(Query::from_string(command));
-
-        fmt::println("Status: {}", result.message);
+        db.execute_query(Query::from_string(command));
     }
 }
 

@@ -158,12 +158,12 @@ public:
     static std::string serialize_database(Database &database) {
         std::ostringstream result;
 
-        auto const graphs = database.get_graphs();
+        auto const &graphs = database.get_graphs();
         result << "{";
         result << "\"graphs\":[";
-        for (size_t i = 0; i < graphs->size(); ++i) {
-            result << serialize_graph((*graphs)[i]);
-            if (i + 1 < graphs->size()) result << ",";
+        for (size_t i = 0; i < graphs.size(); ++i) {
+            result << serialize_graph(graphs[i]);
+            if (i + 1 < graphs.size()) result << ",";
         }
         result << "]" << "}";
 

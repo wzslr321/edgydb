@@ -6,24 +6,14 @@
 
 #include <fstream>
 #include <iostream>
-#include <__algorithm/ranges_find_if.h>
+#include <ranges>
 
 #include "deserialization.hpp"
 #include "Seeder.hpp"
 #include "serialization.hpp"
-#include "fmt/compile.h"
 
 namespace rg = std::ranges;
 
-auto Query::from_string(const std::string &query) -> Query {
-    const auto space_separated_view = query | std::views::split(' ') | std::ranges::to<std::vector<std::string> >();
-
-    std::vector<std::unique_ptr<Command> > commands{};
-    for (const auto &word: space_separated_view) {
-        commands.push_back(std::make_unique<Command>(word));
-    }
-    return Query{std::move(commands)};
-}
 
 template<std::predicate<const Node &> Predicate>
 auto Graph::find_nodes_where(Predicate predicate) -> std::vector<Node> {
@@ -31,32 +21,20 @@ auto Graph::find_nodes_where(Predicate predicate) -> std::vector<Node> {
     return std::vector<Node>(filtered_nodes.begin(), filtered_nodes.end());
 }
 
-auto Database::init_commands() -> std::vector<Command> {
-    constexpr auto available_commands_count = 3;
-
-    std::vector<Command> commands;
-    commands.reserve(available_commands_count);
-
-    commands.emplace_back("SELECT");
-    commands.emplace_back("WHERE");
-    commands.emplace_back("CREATE");
-
-    return std::move(commands);
+auto Database::set_graph(Graph &graph) -> void {
+    this->current_graph = &graph;
 }
 
 auto Database::seed() -> void {
     Seeder seeder;
-    Graph graph1;
-    Graph graph2;
-    seeder.seed_graph(graph1);
-    seeder.seed_graph(graph2);
-    this->graphs = {graph1, graph2};
+    auto const graph = new Graph{};
+    seeder.seed_graph(*graph);
+    this->current_graph = graph;
 }
 
 Database::Database(const DatabaseConfig config) : config(config) {
     if (config.from_seed) {
         this->seed();
-        valid_commands = init_commands();
         return;
     }
 
@@ -78,14 +56,17 @@ Database::Database(const DatabaseConfig config) : config(config) {
         std::cerr << "Error during database restoration: " << e.what() << std::endl;
         std::cerr << "Starting with an empty database." << std::endl;
     }
-
-    valid_commands = init_commands();
 }
 
-auto Database::get_graphs() -> std::unique_ptr<std::vector<Graph> > {
-    return std::make_unique<std::vector<Graph> >(this->graphs);
+auto Database::get_graph() const -> const Graph & {
+    return *this->current_graph;
 }
 
+auto Database::get_graphs() -> std::vector<Graph> & {
+    return this->graphs;
+}
+
+/*
 auto Database::is_command_semantic_valid(const std::string &keyword, const std::string &next) -> bool {
     const auto matched_command = rg::find_if(valid_commands, [&keyword](const auto &command) {
         return keyword == command.keyword;
@@ -96,15 +77,20 @@ auto Database::is_command_semantic_valid(const std::string &keyword, const std::
         return next == command->keyword;
     }) != matched_command->next.end();
 }
+*/
 
+/*
 auto Database::is_query_valid(const Query &query) -> bool {
-    auto const is_query_valid = rg::find_if(query.commands, [this](const auto &command) {
-        return this->is_command_semantic_valid(command->keyword, command->value);
-    }) != query.commands.end();
+    const auto &commands = query.get_commands();
+    auto const is_query_valid = rg::find_if(commands, [this](const auto &command) {
+        return this->is_command_semantic_valid(command.keyword, command.value);
+    }) != commands.end();
 
     return is_query_valid;
 }
+*/
 
+// TODO: Maybe just throw instead of IOResult
 auto Database::sync_with_storage() -> IOResult {
     try {
         std::ofstream file("database_snapshot.json", std::ios::binary);
@@ -123,27 +109,21 @@ auto Database::sync_with_storage() -> IOResult {
 }
 
 
-auto Database::execute_query(const Query &query) -> QueryResult {
+auto Database::execute_query(const Query &query) -> void {
     /*
     if (!is_query_valid(query)) {
         return QueryResult("validation failure", OperationResultStatus::SyntaxError, std::nullopt);
     }
     */
 
-    if (query.commands.empty()) {
-        return QueryResult("commands are empty", OperationResultStatus::ValueError, std::nullopt);
+    /*
+    if (const auto &commands = query.get_commands(); commands.empty()) {
+        std::cerr << "No commands found. Nothing is executed." << std::endl;
+        return;
     }
-    const auto &commands = query.commands;
+    */
 
-    if (const auto &command = commands.front(); command->keyword == "SELECT") {
-        const auto found = this->graphs[0].find_nodes_where([](const auto &node) {
-            return node.id > 1;
-        });
-        auto result = QueryResultData{std::make_unique<std::vector<Node> >(found)};
-
-        return QueryResult("Success", OperationResultStatus::Success, std::move(result));
-    } else if (command->keyword == "WHERE") {
-    }
+    query.handle(*this);
 
     this->unsynchronized_queries_count += 1;
     if (this->unsynchronized_queries_count >= this->config.unsynced_queries_limit) {
@@ -152,11 +132,69 @@ auto Database::execute_query(const Query &query) -> QueryResult {
                 this->unsynchronized_queries_count = 0;
                 break;
             default:
-                return QueryResult("Failed to synchronize storage.Error: " + result.message,
-                                   OperationResultStatus::ExecutionError, std::nullopt);
+                std::cerr << std::format("Failed to synchronize storage. Error: {}", result.message);
         }
     }
-
-    return QueryResult("Success", OperationResultStatus::Success, std::nullopt);
 }
 
+Query::Query(std::vector<Command> commands) : commands(std::move(commands)) {
+}
+
+auto Query::from_string(const std::string &query) -> Query {
+    const auto words = query | std::views::split(' ') | std::ranges::to<std::vector<std::string> >();
+
+    std::vector<Command> commands{};
+    for (int i = 0, size = words.size(); i < size - 1; i += 2) {
+        commands.emplace_back(Command(words[i], words[i + 1]));
+    }
+    if (commands.empty()) {
+        throw std::invalid_argument("Query can not be empty");
+    }
+    return Query(std::move(commands));
+}
+
+auto Query::handle_use(Database &db) const -> void {
+    logger.info("Starting handle_use.");
+    auto &graphs = db.get_graphs();
+    logger.info(std::format("Graphs size: {}", graphs.size()));
+
+    if (commands.empty()) {
+        logger.error("Query commands are empty.");
+        throw std::runtime_error("Query has no commands.");
+    }
+
+    const auto &command_value = this->get_commands().front().value;
+    logger.info(std::format("Searching for graph with name: {}", command_value));
+
+    const auto it = std::ranges::find_if(graphs, [&command_value](const auto &graph) {
+        return graph.name == command_value;
+    });
+
+    if (it != graphs.end()) {
+        logger.info(std::format("Graph found: {}", it->name));
+        db.set_graph(*it);
+    } else {
+        logger.error("Graph not found.");
+        throw std::runtime_error("Graph not found.");
+    }
+}
+
+auto Query::handle(Database &db) const -> void {
+    logger.info("STARTED HANDLE");
+    handle_use(db);
+    /*
+    const auto &first_command = commands.front();
+    logger.debug(std::format("Started attempt to handle query with first command: {}", first_command.keyword));
+    if (first_command.keyword == "USE") {
+        return handle_use(db);
+    }
+    throw std::invalid_argument("Unknown command");
+    */
+}
+
+auto Query::get_commands() const -> const std::vector<Command> & {
+    return commands;
+}
+
+Logger Database::logger("Database");
+Logger Query::logger("Query");

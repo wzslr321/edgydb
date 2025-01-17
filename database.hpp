@@ -8,7 +8,11 @@
 #include <variant>
 #include <vector>
 #include <ranges>
+
+#include "Logger.hpp"
 #include "fmt/core.h"
+
+class Database;
 
 struct BasicValue {
     std::variant<int, double, bool, std::string> data;
@@ -88,48 +92,6 @@ struct Graph {
     [[nodiscard]] std::vector<Node> find_nodes_where(Predicate predicate);
 };
 
-
-struct Command {
-    std::vector<std::unique_ptr<Command> > next{};
-    std::string keyword;
-    std::string value;
-
-    explicit Command(std::string keyword) : keyword(std::move(keyword)) {
-    }
-};
-
-struct Query {
-    std::vector<std::unique_ptr<Command> > commands{};
-
-    static auto from_string(const std::string &query) -> Query;
-
-    explicit Query(std::vector<std::unique_ptr<Command> > commands)
-        : commands(std::move(commands)) {
-    };
-};
-
-enum class OperationResultStatus {
-    Success,
-    SyntaxError,
-    ValueError,
-    ExecutionError,
-};
-
-
-using QueryResultData = std::optional<std::variant<std::unique_ptr<std::vector<Edge> >, std::unique_ptr<std::vector<
-    Node> > > >;
-
-struct QueryResult {
-    std::string message;
-    OperationResultStatus status;
-    QueryResultData data;
-
-    explicit QueryResult(std::string message, const OperationResultStatus &status,
-                         QueryResultData data)
-        : message(std::move(message)), status(status), data(std::move(data)) {
-    }
-};
-
 enum class IOResultStatus {
     Success,
     Failure,
@@ -146,37 +108,69 @@ struct IOResult {
 
 struct DatabaseConfig {
     int unsynced_queries_limit{};
-    bool from_seed = true;
+    bool from_seed = false;
 
     explicit DatabaseConfig(const int unsynced_queries_limit = 10) : unsynced_queries_limit(
         unsynced_queries_limit) {
     }
 };
 
+struct Command {
+    std::vector<std::unique_ptr<Command> > next{};
+    std::string keyword;
+    std::string value;
+
+    explicit Command(std::string keyword, std::string value) : keyword(std::move(keyword)), value(std::move(value)) {
+    }
+};
+
+class Query {
+    std::vector<Command> commands{};
+
+    static Logger logger;
+
+    explicit Query(std::vector<Command> commands);
+
+
+    auto handle_use(Database &db) const -> void;
+
+public:
+    auto handle(Database &db) const -> void;
+
+    [[nodiscard]] auto get_commands() const -> const std::vector<Command> &;
+
+    static auto from_string(const std::string &query) -> Query;
+};
+
 class Database {
     DatabaseConfig config{};
 
     std::vector<Graph> graphs{};
-    std::vector<Command> valid_commands{};
+    Graph *current_graph = nullptr;
+
+    static Logger logger;
 
     int unsynchronized_queries_count = 0;
 
-    static auto init_commands() -> std::vector<Command>;
-
-    auto is_command_semantic_valid(const std::string &keyword, const std::string &next) -> bool;
+    // auto is_command_semantic_valid(const std::string &keyword, const std::string &next) -> bool;
 
     auto is_query_valid(const Query &query) -> bool;
 
     auto sync_with_storage() -> IOResult;
 
 public:
-    QueryResult execute_query(const Query &query);
-
     explicit Database(DatabaseConfig config);
 
-    std::unique_ptr<std::vector<Graph> > get_graphs();
+    auto execute_query(const Query &query) -> void;
 
-    void seed();
+    auto get_graph() const -> const Graph &;
+
+    auto get_graphs() -> std::vector<Graph> &;
+
+    auto set_graph(Graph &graph) -> void;
+
+    auto seed() -> void;
 };
+
 
 #endif //GRAPH_HPP

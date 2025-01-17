@@ -6,11 +6,9 @@
 #define DESERIALIZATION_HPP
 
 #include <string>
-#include <sstream>
 #include <stdexcept>
 
 #include "Logger.hpp"
-#include "database.hpp"
 
 class Deserialization {
     static Logger logger;
@@ -188,7 +186,10 @@ class Deserialization {
             if (json[pos] != ':') throw std::runtime_error("Expected ':' after key");
             ++pos;
 
-            if (key == "nodes") {
+            if (key == "name") {
+                graph.name = parse_string(json, pos);
+                ++pos;
+            } else if (key == "nodes") {
                 if (json[pos] != '[') throw std::runtime_error("Expected array");
                 ++pos;
                 while (pos < json.size() && json[pos] != ']') {
@@ -205,9 +206,6 @@ class Deserialization {
                     if (json[pos] == ',') ++pos;
                 }
                 if (pos >= json.size() || json[pos] != ']') throw std::runtime_error("Unterminated array");
-                ++pos;
-            } else if (key == "name") {
-                graph.name = parse_string(json, pos);
                 ++pos;
             }
 
@@ -238,7 +236,7 @@ public:
                 ++pos;
 
                 while (pos < json.size() && json[pos] != ']') {
-                    graphs.push_back(parse_graph(json, pos));
+                    graphs.emplace_back(parse_graph(json, pos));
                     if (json[pos] == ',') ++pos;
                 }
                 if (pos >= json.size() || json[pos] != ']') throw std::runtime_error("Unterminated array");
@@ -251,7 +249,7 @@ public:
         if (pos >= json.size() || json[pos] != '}') throw std::runtime_error("Unterminated object");
         ++pos;
 
-        logger.info(std::format("Parsing finished for {} graphs in total ", graphs.size()));
+        logger.info(std::format("Parsing finished for {} graphs in total", graphs.size()));
         return std::move(graphs);
     }
 };
