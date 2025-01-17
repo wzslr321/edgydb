@@ -5,80 +5,6 @@
 #include "database.hpp"
 #include "Logger.hpp"
 
-/// Structure of the database consists of nodes and edges, therefore it is a graph.
-/// Database can consist of multiple graphs.
-///   Node can directly hold any value, e.g. string.
-/// Nodes also support complex types, although under the hood
-/// it is stored in another place, and node only has a reference to it.
-///   Edge 'connects' nodes, therefore is a relation between them.
-/// The graph is directed, which means that edge A->B (where A->B syntax means edge from node A to node B)
-/// is not the exact same edge as edge B->A
-/// If there is an edge A->B, there must exist edge B->A
-/// Edge must hold additional information (simply via name) about relation between nodes it connects
-///
-/// Language supporting above functionalities:
-///
-/// DDL (Data Definition Language)
-///
-/// CREATE TYPE Student                                     <--- DEFINE CUSTOM TYPE
-///     | WITH FIELDS
-///         | id INT,
-///         | name STRING,
-///         | email STRING
-///
-/// CREATE EDGE [EDGE_NAME_1, ..., EDGE_NAME_N]             <---  DEFINE EDGES
-///     | WHERE EDGE [EDGE_NAME_1] CONNECTS                 <---  RESTRICT WHAT VALUES THE EDGE CAN CONNECT
-///         | INT AND INT
-///         | INT AND Student
-///
-/// CREATE NODE [NODE_NAME_1, ..., NODE_NAME_N]             <--- DEFINE NODES
-///     | WHERE NODE [NODE_NAME_1] IS Student,
-///     ...
-///     | WHERE NODE [NODE_NAME_N] IS INT                   <--- SPECIFY NODE'S VALUE TYPE
-///     | WHERE NODE [NODE_NAME_N] ACCEPTS OUT              <--- SPECIFY WHICH EDGES CAN START IN THE NODE
-///         | EDGE_NAME_1
-///     | WHERE NODE [NODE_NAME_N] ACCEPTS IN               <--- SPECIFY WHICH EDGES CAN END IN THE NODE
-///         | EDGE_NAME_N
-///
-/// (NOTE): EDGES AND NODES CAN BE DEFINED INDEPENDENTLY,
-/// AS THOSE CAN BE REUSED IN MULTIPLE GRAPHS
-///
-/// CREATE GRAPH [NAME]                                     <--- DEFINE GRAPH STRUCTURE
-///     | WITH NODES [NODE_NAME_1, ..., NODE_NAME_N]
-///
-///
-/// DML (Data Modification Language)
-///
-/// INSERT NODE [NODE_NAME] INTO [GRAPH_NAME]
-///     | WITH VALUE "SOME VALUE"
-///
-/// UPDATE NODE [NODE_NAME] TO "SOME OTHER VALUE"
-///
-/// REMOVE NODE [NODE_NAME]
-///
-/// INSERT EDGE [EDGE_NAME]
-///     | FROM [NODE_NAME_1]
-///     | TO [NODE_NAME_2]
-///
-/// REMOVE EDGE [EDGE_NAME]
-///
-/// (NOTE): There can exist multiple nodes with the same value.
-/// To handle that, internal ids are added to every node.
-/// Those ids can be displayed via SELECT (more about it later) command
-/// and then used via WHERE clause to narrow which node should be affected by given command
-///
-///
-/// DQL (Data Query Language)
-///
-/// SELECT NODE
-///     | WHERE VALUE > 50 && VALUE < 100
-///     | WHERE COUNT(NODE.OUT) > 3
-///
-/// PATH FROM [NODE_NAME] TO [NODE_NAME]
-///
-/// TRAVERSE FROM [NODE_NAME]
-///     | WITH DEPTH=3
-
 void repl(Database &db);
 
 int Logger::trace_level = 0;
@@ -112,7 +38,7 @@ auto main(const int argc, char *argv[]) -> int {
 void display_help();
 
 std::string trim_leading_spaces(const std::string &str) {
-    auto it = std::find_if(str.begin(), str.end(), [](unsigned char ch) {
+    const auto it = std::ranges::find_if(str, [](const unsigned char ch) {
         return !std::isspace(ch);
     });
     return std::string(it, str.end());

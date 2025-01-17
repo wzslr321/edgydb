@@ -152,10 +152,6 @@ class Database {
 
     int unsynchronized_queries_count = 0;
 
-    // auto is_command_semantic_valid(const std::string &keyword, const std::string &next) -> bool;
-
-    auto is_query_valid(const Query &query) -> bool;
-
     auto sync_with_storage() -> IOResult;
 
 public:

@@ -66,30 +66,6 @@ auto Database::get_graphs() -> std::vector<Graph> & {
     return this->graphs;
 }
 
-/*
-auto Database::is_command_semantic_valid(const std::string &keyword, const std::string &next) -> bool {
-    const auto matched_command = rg::find_if(valid_commands, [&keyword](const auto &command) {
-        return keyword == command.keyword;
-    });
-    if (matched_command == valid_commands.end()) return false;
-
-    return rg::find_if(matched_command->next, [&next](const auto &command) {
-        return next == command->keyword;
-    }) != matched_command->next.end();
-}
-*/
-
-/*
-auto Database::is_query_valid(const Query &query) -> bool {
-    const auto &commands = query.get_commands();
-    auto const is_query_valid = rg::find_if(commands, [this](const auto &command) {
-        return this->is_command_semantic_valid(command.keyword, command.value);
-    }) != commands.end();
-
-    return is_query_valid;
-}
-*/
-
 // TODO: Maybe just throw instead of IOResult
 auto Database::sync_with_storage() -> IOResult {
     try {
@@ -110,19 +86,6 @@ auto Database::sync_with_storage() -> IOResult {
 
 
 auto Database::execute_query(const Query &query) -> void {
-    /*
-    if (!is_query_valid(query)) {
-        return QueryResult("validation failure", OperationResultStatus::SyntaxError, std::nullopt);
-    }
-    */
-
-    /*
-    if (const auto &commands = query.get_commands(); commands.empty()) {
-        std::cerr << "No commands found. Nothing is executed." << std::endl;
-        return;
-    }
-    */
-
     query.handle(*this);
 
     this->unsynchronized_queries_count += 1;
