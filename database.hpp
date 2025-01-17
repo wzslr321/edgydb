@@ -20,9 +20,9 @@ struct BasicValue {
     [[nodiscard]] std::string toString() const {
         return std::visit([]<typename T0>(const T0 &arg) -> std::string {
             using T = std::decay_t<T0>;
-            if constexpr (std::is_same_v<T, bool>) {
+            if constexpr (std::same_as<T, bool>) {
                 return arg ? "true" : "false";
-            } else if constexpr (std::is_same_v<T, std::string>) {
+            } else if constexpr (std::same_as<T, std::string>) {
                 return arg;
             } else {
                 return std::to_string(arg);
@@ -78,6 +78,7 @@ struct Edge {
     int id{};
     int from{};
     int to{};
+    // TODO:: possibly remove
     std::string relation;
 };
 
@@ -131,8 +132,17 @@ class Query {
 
     explicit Query(std::vector<Command> commands);
 
-
     auto handle_use(Database &db) const -> void;
+
+    auto handle_create_graph(Database &db) const -> void;
+
+    auto handle_insert_node(Database &db) const -> void;
+
+    auto handle_insert_edge(Database &db) const -> void;
+
+    auto handle_select(Database &db) const -> void;
+
+    auto handle_update_node(Database &db) const -> void;
 
 public:
     auto handle(Database &db) const -> void;
@@ -157,11 +167,15 @@ class Database {
 public:
     explicit Database(DatabaseConfig config);
 
+    ~Database();
+
     auto execute_query(const Query &query) -> void;
 
     auto get_graph() const -> const Graph &;
 
     auto get_graphs() -> std::vector<Graph> &;
+
+    auto add_graph(Graph &graph) -> void;
 
     auto set_graph(Graph &graph) -> void;
 

@@ -11,7 +11,8 @@
 #include "Logger.hpp"
 
 class Deserialization {
-    static Logger logger;
+    // TODO: do that eveywehre else
+    inline static auto logger = Logger("Deserialization");
 
     static std::string parse_string(const std::string &json, size_t &pos) {
         logger.debug(std::format("Deserialization of string started at pos {}", pos));
@@ -98,6 +99,7 @@ class Deserialization {
             if (json[pos] != ':') throw std::runtime_error("Expected ':' in UserDefinedValue");
             ++pos;
 
+            // TODO: possibly dont care about nested
             if (json[pos] == '{') {
                 UserDefinedValue value = parse_user_defined_value(json, pos);
                 data.emplace_back(key, value);
@@ -253,8 +255,6 @@ public:
         return std::move(graphs);
     }
 };
-
-Logger Deserialization::logger("Deserialization");
 
 #endif //DESERIALIZATION_HPP
 

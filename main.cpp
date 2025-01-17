@@ -1,6 +1,6 @@
 #include <iostream>
 #include <fmt/core.h>
-#include <__algorithm/ranges_contains.h>
+#include <algorithm>
 
 #include "database.hpp"
 #include "Logger.hpp"
@@ -29,7 +29,7 @@ auto main(const int argc, char *argv[]) -> int {
     }
     Logger::set_trace_level(trace_level);
 
-    const auto db_config = DatabaseConfig(1);
+    const auto db_config = DatabaseConfig(100);
     auto db = Database(db_config);
     repl(db);
     return 0;
