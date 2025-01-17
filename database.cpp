@@ -11,7 +11,6 @@
 #include <numeric>
 
 #include "deserialization.hpp"
-#include "Seeder.hpp"
 #include "serialization.hpp"
 #include "Utils.hpp"
 
@@ -37,19 +36,7 @@ auto Database::add_node(Node &node) const -> void {
     this->current_graph->nodes.emplace_back(node);
 }
 
-auto Database::seed() -> void {
-    Seeder seeder;
-    auto const graph = new Graph{};
-    seeder.seed_graph(*graph);
-    this->current_graph = graph;
-}
-
 Database::Database(const DatabaseConfig config) : config(config) {
-    if (config.from_seed) {
-        this->seed();
-        return;
-    }
-
     try {
         if (std::ifstream file("database_snapshot.json"); file.is_open()) {
             std::ostringstream buffer;

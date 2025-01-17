@@ -65,9 +65,9 @@ int Logger::trace_level = 0;
 // INSERT NODE [data]  ✅
 //
 // Dodaje node zawierającego dane o strukturze zdefiniowanej przez użytkownika, gdzie pole
-// "name" jest polem wymaganym.
+// "name" jest polem wymaganym. Struktura musi być poprawnym JSON'em
 // Przykład: INSERT NODE COMPLEX {"name":"pracownik", "wiek":40, "pensja": 1000, "imię":"Marcin"}
-// INSERT NODE COMPLEX {"name":"[nazwa]", "[pole1]":[wartość1], "[pole2]":[wartość2]} ❌
+// INSERT NODE COMPLEX {"name":"[nazwa]", "[pole1]":[wartość1], "[pole2]":[wartość2]} ✅
 // Każde pole oprócz name, może być kolejnym typem danych o strukturze
 // zdefiniowanej przez użytkownika!
 // Przykład: INSERT NODE COMPLEX {"name":"pracownik", "wiek":40, "pensja": 1000, "imię":"Marcin", "przyjaciel": {"name":"pracownik", "wiek":42, "pensja": 1200, "imię":"Paweł"}}
@@ -100,8 +100,9 @@ int Logger::trace_level = 0;
 // Baza dancyh zapisuje swój stan przy zamknięciu programu oraz po wykonaniu N zapytań
 // gdzie N jest wartością przekazywaną do konfiguracji bazy danych - klasa DatabaseConfig.
 auto main(const int argc, char *argv[]) -> int {
+    // Zczytywanie argumentu, który pomagał mi w pracy nad projektem.
+    // Gdy trace_level >= 1 to załączane są logi na poziomie DEBUG
     int trace_level = 0;
-
     for (int i = 1; i < argc; ++i) {
         if (std::string arg = argv[i]; arg.rfind("--trace-level=", 0) == 0) {
             try {
@@ -119,7 +120,8 @@ auto main(const int argc, char *argv[]) -> int {
     }
     Logger::set_trace_level(trace_level);
 
-    const auto db_config = DatabaseConfig(100, false);
+    //
+    const auto db_config = DatabaseConfig(100);
     auto db = Database(db_config);
     repl(db);
     return 0;

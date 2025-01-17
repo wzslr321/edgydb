@@ -7,7 +7,6 @@ add_executable(edgydb main.cpp database.cpp database.hpp
         serialization.hpp
         deserialization.hpp
         Logger.hpp
-        Seeder.hpp
         Utils.hpp
 )
 

@@ -109,11 +109,9 @@ struct IOResult {
 
 struct DatabaseConfig {
     int unsynced_queries_limit{};
-    bool from_seed{};
 
-    explicit DatabaseConfig(const int unsynced_queries_limit = 10,
-                            const bool from_seed = false) : unsynced_queries_limit(
-                                                                unsynced_queries_limit), from_seed(from_seed) {
+    explicit DatabaseConfig(const int unsynced_queries_limit = 10) : unsynced_queries_limit(
+        unsynced_queries_limit) {
     }
 };
 
@@ -185,8 +183,6 @@ public:
     auto set_graph(Graph &graph) -> void;
 
     auto add_node(Node &node) const -> void;
-
-    auto seed() -> void;
 };
 
 
