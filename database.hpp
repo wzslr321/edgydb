@@ -142,7 +142,7 @@ class Query {
 
     auto handle_select(Database &db) const -> void;
 
-    auto handle_update_node(Database &db) const -> void;
+    auto handle_update_node(Database &db, bool isComplex) const -> void;
 
 public:
     auto handle(Database &db) const -> void;

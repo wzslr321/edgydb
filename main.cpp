@@ -77,7 +77,11 @@ int Logger::trace_level = 0;
 // INSERT EDGE FROM [node.id] TO [node.id] ✅
 //
 // Aktualizuje dane przechowywane w node o danym id na pryumitywne dane. Przykład: UPDATE NODE 1 TO "Krzysztof"
-// UPDATE NODE [node.id] TO [data] ❌
+// UPDATE NODE [node.id] TO [data] ✅
+//
+// Aktualizuje dane przechowywane w node o danym id na dane zdefiniowane przez użytkownika.
+// Dane te muszą być poprawnym JSON'em, z obowiązkowym polem "name" o typie string. Przykład: UPDATE NODE 1 TO COMPLEX {"name":"pracownik", "szef":true}
+// UPDATE NODE [node.id] TO COMPLEX [data] ✅
 //
 // Wyświetla dane zawarte w node o danym id. Przykład: SELECT NODE 1
 // SELECT NODE [node.id] ❌

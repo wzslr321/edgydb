@@ -203,6 +203,7 @@ auto Query::from_string(const std::string &query) -> std::optional<Query> {
     }
 
     if (words.size() >= 4) {
+        // ensure size checks as json spaces may conflict
         if (words[0] == "INSERT" && words[1] == "NODE" && words[2] == "COMPLEX") {
             const auto rest = Utils::get_rest_of_space_separated_string(words, 3);
             commands.emplace_back("INSERT NODE COMPLEX", Utils::minifyJson(rest));
@@ -216,6 +217,12 @@ auto Query::from_string(const std::string &query) -> std::optional<Query> {
         if (words.size() == 5 && words[0] == "UPDATE" && words[1] == "NODE" && words[3] == "TO") {
             auto val = words[2] + " " + Utils::get_rest_of_space_separated_string(words, 4);
             commands.emplace_back("UPDATE NODE TO", val);
+            return Query(std::move(commands));
+        }
+        if (words[0] == "UPDATE" && words[1] == "NODE" && words[3] == "TO" && words[4] ==
+            "COMPLEX") {
+            auto val = words[2] + " " + Utils::get_rest_of_space_separated_string(words, 5);
+            commands.emplace_back("UPDATE NODE TO COMPLEX", val);
             return Query(std::move(commands));
         }
         throw std::invalid_argument("Invalid query");
@@ -312,7 +319,7 @@ auto Query::handle_select(Database &db) const -> void {
     logger.debug("SELECT NODE started");
 }
 
-auto Query::handle_update_node(Database &db) const -> void {
+auto Query::handle_update_node(Database &db, bool isComplex) const -> void {
     logger.debug("UPDATE NODE started");
     auto value = this->commands.front().value;
     auto parts = value | std::views::split(' ') | std::ranges::to<std::vector<std::string> >();
@@ -327,7 +334,14 @@ auto Query::handle_update_node(Database &db) const -> void {
         }
         if (matched_node != nullptr) {
             size_t pos = 0;
-            matched_node->data = Deserialization::parse_value(new_value, pos);
+            std::variant<BasicValue, UserDefinedValue> value;
+            if (isComplex) {
+                value = Deserialization::parse_user_defined_value(
+                    Utils::minifyJson(new_value), pos);
+            } else {
+                value = Deserialization::parse_value(new_value, pos);
+            }
+            matched_node->data = value;
             logger.info(std::format("Successfully updated node with id {}", node_id));
         } else {
             std::cerr << "Update failed. No node found with given id" << std::endl;
@@ -356,7 +370,10 @@ auto Query::handle(Database &db) const -> void {
         return handle_insert_edge(db);
     }
     if (first_command.keyword == "UPDATE NODE TO") {
-        return handle_update_node(db);
+        return handle_update_node(db, false);
+    }
+    if (first_command.keyword == "UPDATE NODE TO COMPLEX") {
+        return handle_update_node(db, true);
     }
     if (first_command.keyword == "SELECT NODE") {
         return handle_select(db);
