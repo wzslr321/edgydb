@@ -57,49 +57,49 @@ int Logger::trace_level = 0;
 // Wspierane zapytania:
 //
 // Wybiera graf, na którym będą operować kolejne komendy, o ile taki istnieje. Przykład: USE firefighters
-// USE [nazwa] ✅
+// USE [nazwa]
 //
 // Tworzy graf o nazwie [nazwa]. Przykład: CREATE firefighters
-// CREATE GRAPH [nazwa] ✅
+// CREATE GRAPH [nazwa]
 //
 // Dodaje node zawierający prymitywne dane. Przykład: INSERT NODE "Mariusz"
-// INSERT NODE [data]  ✅
+// INSERT NODE [data]
 //
 // Dodaje node zawierającego dane o strukturze zdefiniowanej przez użytkownika, gdzie pole
 // "name" jest polem wymaganym. Struktura musi być poprawnym JSON'em
 // Przykład: INSERT NODE COMPLEX {"name":"pracownik", "wiek":40, "pensja": 1000, "imię":"Marcin"}
-// INSERT NODE COMPLEX {"name":"[nazwa]", "[pole1]":[wartość1], "[pole2]":[wartość2]} ✅
+// INSERT NODE COMPLEX {"name":"[nazwa]", "[pole1]":[wartość1], "[pole2]":[wartość2]}
 // Każde pole oprócz name, może być kolejnym typem danych o strukturze
 // zdefiniowanej przez użytkownika!
 // Przykład: INSERT NODE COMPLEX {"name":"pracownik", "wiek":40, "pensja": 1000, "imię":"Marcin", "przyjaciel": {"name":"pracownik", "wiek":42, "pensja": 1200, "imię":"Paweł"}}
 //
 // Dodaje połączenie między node'ami, bazując na przekazanym ich id. Przykład: INSERT EDGE FROM 1 to 2
-// INSERT EDGE FROM [node.id] TO [node.id] ✅
+// INSERT EDGE FROM [node.id] TO [node.id]
 //
 // Aktualizuje dane przechowywane w node o danym id na pryumitywne dane. Przykład: UPDATE NODE 1 TO "Krzysztof"
-// UPDATE NODE [node.id] TO [data] ✅
+// UPDATE NODE [node.id] TO [data]
 //
 // Aktualizuje dane przechowywane w node o danym id na dane zdefiniowane przez użytkownika.
 // Dane te muszą być poprawnym JSON'em, z obowiązkowym polem "name" o typie string. Przykład: UPDATE NODE 1 TO COMPLEX {"name":"pracownik", "szef":true}
-// UPDATE NODE [node.id] TO COMPLEX [data] ✅
+// UPDATE NODE [node.id] TO COMPLEX [data]
 //
 // Wyświetla dane zawarte w node o danym id. Przykład: SELECT NODE 1
-// SELECT NODE [node.id] ✅
+// SELECT NODE [node.id]
 //
 // Wyświetla wszystkie node wraz z danymi, które spełniają dany warunek.
 // Przykład: SELECT NODE WHERE "pozycja" EQ "menadżer"
-// SELECT NODE WHERE [nazwa_pola] EQ/NEQ [wartość] ❌
+// SELECT NODE WHERE [nazwa_pola] EQ/NEQ [wartość]
 // Powyższa komenda może zawierać dodatkowe warunki oddzielone poprzez AND lub OR
 // Przykład:
-// SELECT NODE WHERE "pozycja" EQ "menadżer" AND "wiek" NEQ 40 AND "profesja" EQ "informatyk" ❌
+// SELECT NODE WHERE "pozycja" EQ "menadżer" AND "wiek" NEQ 40 AND "profesja" EQ "informatyk"
 //
 // Zwraca true/false w zależności od tego czy istnieje połączenie (niebezpośrednie) między node'ami o podanych id
 // Przykład: IS 2 CONNECTED TO 3
-// IS [node.id] CONNECTED TO [node.id] ❌
+// IS [node.id] CONNECTED TO [node.id]
 //
 // Zwraca true/false w zależności od tego czy istnieje połączenie pośrednie między node'ami o podanych id
 // Przykład: IS 2 CONNECTED DIRECTLY TO 3
-// IS [node.id] CONNECTED DIRECTLY TO [node.id] ❌
+// IS [node.id] CONNECTED DIRECTLY TO [node.id]
 //
 //
 // Baza dancyh zapisuje swój stan przy zamknięciu programu oraz po wykonaniu N zapytań

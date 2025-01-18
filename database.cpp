@@ -11,6 +11,7 @@
 #include <numeric>
 #include <unordered_set>
 
+#include "condition.hpp"
 #include "deserialization.hpp"
 #include "serialization.hpp"
 #include "Utils.hpp"
@@ -54,22 +55,6 @@ auto Database::add_edge(Edge &edge) const -> void {
     logger.info(std::format("Adding edge from {} to {}", edge.from, edge.to));
     this->current_graph->edges.emplace_back(edge);
 }
-
-auto Database::update_node(Node &node) -> void {
-}
-
-/*
-auto Database::find_node(const int id) -> std::optional<Node &> {
-auto result = this->current_graph->find_nodes_where([id](const Node &node) {
-    return node.id == id;
-});
-if (!result.empty()) {
-    return result.front();
-}
-
-return std::nullopt;
-}
-*/
 
 Database::Database(const DatabaseConfig config) : config(config) {
     try {
@@ -244,24 +229,23 @@ auto Query::from_string(const std::string &query) -> std::optional<Query> {
             commands.emplace_back("UPDATE NODE TO COMPLEX", val);
             return Query(std::move(commands));
         }
-        throw std::invalid_argument("Invalid query");
-    }
 
 
-    // SELECT NODE WHERE id >/</==
-    if (words.size() == 5) {
-        if (words[0] == "SELECT" && words[1] == "NODE" && words[2] == "WHERE" && words[3] == "id") {
-            commands.emplace_back("SELECT NODE WHERE id", words[4]);
-        } else {
-            throw std::invalid_argument("Invalid query");
+        std::ostringstream conditions_stream;
+        for (size_t i = 3; i < words.size(); ++i) {
+            if (words[i] == "AND" || words[i] == "OR" || words[i].starts_with("\"")) {
+                conditions_stream << words[i] << " ";
+            } else if (words[i] == "EQ" || words[i] == "NEQ") {
+                conditions_stream << words[i] << " ";
+            } else {
+                throw std::invalid_argument("Unexpected token in SELECT NODE WHERE query");
+            }
         }
+
+        commands.emplace_back("SELECT NODE WHERE", Utils::trim(conditions_stream.str()));
+        return Query(std::move(commands));
     }
 
-    // TODO: Support more complex queries
-    // CREATE NODE COMPLEX "name":"[name]", "field1":[data], "field2": [data2] ...
-    // CREATE EDGE FROM [node.id] TO [other_node.id], [other_node2.id], ...
-    // SELECT WHERE TYPE EQUALS [name] OR/AND TYPE EQUALS [name] WHERE [field_name] ...
-    // UPDATE NODE WHERE [some_condition] TO [int/double/bool/string data]
 
     return Query(std::move(commands));
 }
@@ -293,6 +277,64 @@ auto Query::handle_use(Database &db) const -> void {
         std::cerr << "Graph not found. If you want to create it, use CREATE GRAPH command" << std::endl;
     }
 }
+
+auto Query::handle_select_where(Database &db) const -> void {
+    logger.debug("SELECT NODE WHERE started");
+    const auto condition_str = this->commands.front().value;
+
+    try {
+        auto condition_group = parse_conditions(condition_str);
+        auto &graph = db.get_graph();
+
+        auto matches_conditions = [&condition_group](const Node &node) {
+            auto evaluate_condition = [&node](const Condition &condition) {
+                if (!std::holds_alternative<UserDefinedValue>(node.data)) {
+                    return false;
+                }
+                const auto &user_data = std::get<UserDefinedValue>(node.data);
+                const auto &fields = user_data.get_data();
+
+                auto it = std::ranges::find_if(fields, [&condition](const auto &field) {
+                    return field.first == condition.field;
+                });
+
+                if (it == fields.end()) return false;
+
+                const auto &field_value = std::get<BasicValue>(it->second).toString();
+                return (condition.comparator == "EQ" && field_value == condition.value) ||
+                       (condition.comparator == "NEQ" && field_value != condition.value);
+            };
+
+            bool result = evaluate_condition(condition_group.conditions.front());
+            for (size_t i = 0; i < condition_group.operators.size(); ++i) {
+                const auto &op = condition_group.operators[i];
+                const auto &condition = condition_group.conditions[i + 1];
+
+                if (op == "AND") {
+                    result = result && evaluate_condition(condition);
+                } else if (op == "OR") {
+                    result = result || evaluate_condition(condition);
+                }
+            }
+
+            return result;
+        };
+
+        auto matching_nodes = graph.find_nodes_where(matches_conditions);
+
+        if (matching_nodes.empty()) {
+            std::cout << "No nodes matched the given conditions.\n";
+        } else {
+            std::cout << "Matching nodes:\n";
+            for (const auto &node_ref: matching_nodes) {
+                std::cout << node_ref.get().toString() << "\n";
+            }
+        }
+    } catch (const std::exception &e) {
+        std::cerr << "Failed to process SELECT query: " << e.what() << "\n";
+    }
+}
+
 
 auto Query::handle_create_graph(Database &db) const -> void {
     logger.debug("CREATE GRAPH started");
@@ -467,6 +509,9 @@ auto Query::handle(Database &db) const -> void {
     }
     if (first_command.keyword == "SELECT NODE") {
         return handle_select(db);
+    }
+    if (first_command.keyword == "SELECT NODE WHERE") {
+        return handle_select_where(db);
     }
     if (first_command.keyword == "INSERT EDGE FROM TO") {
         return handle_insert_edge(db);

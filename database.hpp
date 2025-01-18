@@ -4,6 +4,7 @@
 #ifndef GRAPH_HPP
 #define GRAPH_HPP
 
+#include <iomanip>
 #include <string>
 #include <variant>
 #include <vector>
@@ -14,6 +15,7 @@
 #include "fmt/core.h"
 
 class Database;
+
 
 struct BasicValue {
     std::variant<int, double, bool, std::string> data;
@@ -185,6 +187,8 @@ class Query {
 
     auto handle_use(Database &db) const -> void;
 
+    auto handle_select_where(Database &db) const -> void;
+
     auto handle_create_graph(Database &db) const -> void;
 
     auto handle_insert_node(Database &db) const -> void;
@@ -198,8 +202,6 @@ class Query {
     auto handle_update_node(Database &db, bool isComplex) const -> void;
 
     auto handle_is_connected(Database &db, bool direct) const -> void;
-
-    auto handle_select_node(Database &db) -> Node &;
 
 public:
     auto handle(Database &db) const -> void;
@@ -241,10 +243,6 @@ public:
     auto add_node(Node &node) const -> void;
 
     auto add_edge(Edge &edge) const -> void;
-
-    auto update_node(Node &node) -> void;
-
-    // auto find_node(const int id) -> std::optional<Node &>;
 };
 
 
