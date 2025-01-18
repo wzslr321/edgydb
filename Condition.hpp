@@ -16,7 +16,7 @@ struct Comparator {
 
     std::string value;
 
-    explicit Comparator(const std::string &value) {
+    explicit Comparator(const std::string_view value) {
         if (!is_valid(value)) {
             throw std::invalid_argument(std::format("Invalid comparator:{}", value));
         }
@@ -24,12 +24,12 @@ struct Comparator {
     }
 
     [[nodiscard]]
-    static auto is_valid(const std::string &value) -> bool {
+    static auto is_valid(const std::string_view value) -> bool {
         return std::ranges::contains(valid_values, value);
     }
 
     [[nodiscard]]
-    auto compare(const std::string &left, const std::string &right) const -> bool {
+    auto compare(const std::string_view left, const std::string_view right) const -> bool {
         if (value == "EQ") {
             return left == right;
         }
@@ -45,7 +45,7 @@ struct LogicalOperator {
 
     std::string value;
 
-    explicit LogicalOperator(const std::string &value) {
+    explicit LogicalOperator(const std::string_view value) {
         if (!is_valid(value)) {
             throw std::invalid_argument(std::format("Invalid logical operator: {}", value));
         }
@@ -53,7 +53,7 @@ struct LogicalOperator {
     }
 
     [[nodiscard]]
-    static auto is_valid(const std::string &value) -> bool {
+    static auto is_valid(const std::string_view value) -> bool {
         return std::ranges::contains(valid_values, value);
     }
 
@@ -88,13 +88,13 @@ struct ConditionGroup {
 };
 
 // TODO: Possibly move to separate Condition.cpp to omit inline specifier
-inline ConditionGroup parse_conditions(const std::string &condition_str) {
-    ConditionGroup group;
-    std::istringstream stream(condition_str);
-    std::string token;
+inline auto parse_conditions(const std::string &condition_str) -> ConditionGroup {
+    auto group = ConditionGroup{};
+    auto stream = std::istringstream(condition_str);
+    auto token = std::string{};
 
     while (stream >> std::quoted(token)) {
-        Condition condition;
+        auto condition = Condition{};
         condition.field = token;
 
         stream >> token;

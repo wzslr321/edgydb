@@ -36,7 +36,7 @@ auto Database::set_graph(Graph &graph) -> void {
 
 auto Database::add_node(Node &node) const -> void {
     if (this->current_graph == nullptr) {
-        std::cerr << "To execute queries first specify graph with USE command" << std::endl;
+        logger.error("To execute queries first specify graph with USE command");
         return;
     }
     logger.info(std::format("Adding node with id {} to the graph with name {}", node.id, this->current_graph->name));
@@ -45,6 +45,7 @@ auto Database::add_node(Node &node) const -> void {
 
 auto Database::add_edge(Edge &edge) const -> void {
     if (this->current_graph == nullptr) {
+        // TODO: replace all std:cerr with logger.error
         std::cerr << "To execute queries first specify graph with USE command" << std::endl;
         return;
     }
@@ -58,11 +59,10 @@ Database::Database(const DatabaseConfig config) : config(config) {
             std::ostringstream buffer;
             buffer << file.rdbuf();
             std::string json = buffer.str();
-            std::erase_if(json, [](unsigned char c) {
-                return std::isspace(c);
-            });
 
+            // TODO: remove all spaces except those inside strings
             this->graphs = std::move(Deserialization::parse_graphs(json));
+            // cout with logger too
             std::cout << "Database successfully restored from file." << std::endl;
         } else {
             std::cerr << "No snapshot file found. Starting with an empty database." << std::endl;
@@ -101,8 +101,6 @@ auto Database::sync_with_storage() -> void {
         }
 
         file << Serialization::serialize_database(*this);
-        file.close();
-
         unsynchronized_queries_count = 0;
     } catch (const std::exception &e) {
         throw std::runtime_error(std::format("Error:{}", e.what()));
@@ -388,6 +386,7 @@ auto Query::handle_select(const Database &db) const -> void {
 auto Query::handle_update_node(Database &db, bool isComplex) const -> void {
     logger.debug("UPDATE NODE started");
     auto value = this->commands.front().value;
+    // TODO: move to separte func
     auto parts = value | std::views::split(' ') | std::ranges::to<std::vector<std::string> >();
     auto new_value = Utils::get_rest_of_space_separated_string(parts, 1);
     try {

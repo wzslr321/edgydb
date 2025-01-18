@@ -146,12 +146,16 @@ void repl(Database &db) {
         fmt::print("> ");
         std::string command;
         std::getline(std::cin, command);
-        command = Utils::removeConsecutiveSpaces(command);
-        if (rg::contains(exit_commands, command)) break;
+        command = Utils::remove_consecutive_spaces(command);
+        if (rg::contains(exit_commands, command)) {
+            break;
+        }
+
         if (command == "help") {
             display_help();
             continue;
         }
+        // TODO: possibly display err
         if (auto query = Query::from_string(command); query.has_value()) {
             db.execute_query(query.value());
         }

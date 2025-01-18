@@ -9,7 +9,7 @@
 #include <numeric>
 
 struct Utils {
-    static auto minify_json(const std::string &json) -> std::string {
+    static auto minify_json(const std::string_view json) -> std::string {
         std::string result;
         bool in_string = false;
 
@@ -27,7 +27,7 @@ struct Utils {
         return result;
     }
 
-    static auto trim(const std::string &str) -> std::string {
+    static auto trim(const std::string_view str) -> std::string {
         auto start = str.begin();
         while (start != str.end() && std::isspace(*start)) {
             ++start;
@@ -41,12 +41,13 @@ struct Utils {
         return {start, end + 1};
     }
 
-    static auto removeConsecutiveSpaces(const std::string &input) -> std::string {
+    // TODO: ensure everywhere _ case
+    static auto remove_consecutive_spaces(const std::string_view input) -> std::string {
         const auto trimmed = trim(input);
         std::string result;
         int braceCount = 0;
 
-        for (char c: trimmed) {
+        for (const char c: trimmed) {
             if (c == '{') {
                 braceCount++;
             } else if (c == '}') {

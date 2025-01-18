@@ -36,10 +36,10 @@ class Logger {
     }
 
     auto print_with_color(const std::string &level, const fmt::rgb &level_color,
-                          const std::string &message) const -> void {
-        fmt::print(fg(level_color), "[{}] ", level);
-        fmt::print(fg(name_color), "[{}] ", name);
-        fmt::print("{}\n", message);
+                          const std::string &message, std::FILE *pipe = stdout) const -> void {
+        fmt::print(pipe, fg(level_color), "[{}] ", level);
+        fmt::print(pipe, fg(name_color), "[{}] ", name);
+        fmt::print(pipe, "{}\n", message);
     }
 
 public:
@@ -61,7 +61,7 @@ public:
     }
 
     auto error(const std::string &message) const -> void {
-        print_with_color("ERROR", fmt::color::red, message);
+        print_with_color("ERROR", fmt::color::red, message, stderr);
     }
 
     auto debug(const std::string &message) const -> void {

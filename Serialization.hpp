@@ -78,11 +78,12 @@ public:
             result << "\"" << escape_json(key) << "\":";
 
             std::visit(
-                [&result]<typename T0>(const T0 &v) {
-                    using T = std::decay_t<T0>;
-                    if constexpr (std::is_same_v<T, BasicValue>) {
+                [&result]<typename U>(const U &v) {
+                    using T = std::remove_cvref_t<U>;
+                    // replace other is_same with same_as
+                    if constexpr (std::same_as<T, BasicValue>) {
                         result << serialize_value(v);
-                    } else if constexpr (std::is_same_v<T, UserDefinedValue>) {
+                    } else if constexpr (std::same_as<T, UserDefinedValue>) {
                         result << serialize_user_defined_value(v);
                     }
                 },

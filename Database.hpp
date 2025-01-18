@@ -1,24 +1,26 @@
 //
 // Created by Wiktor Zając on 27/11/2024.
 //
-#ifndef GRAPH_HPP
-#define GRAPH_HPP
+#ifndef DATABASE_HPP
+#define DATABASE_HPP
 
 #include <string>
 #include <variant>
 #include <vector>
 #include <ranges>
 #include <sstream>
+#include "fmt/core.h"
 
 #include "Logger.hpp"
-#include "fmt/core.h"
 
 class Database;
 
 namespace rg = std::ranges;
 
+
 struct BasicValue {
-    std::variant<int, double, bool, std::string> data;
+    using Data = std::variant<int, double, bool, std::string>;
+    Data data;
 
     // TODO: Simplify those awful toString
     [[nodiscard]]
@@ -37,11 +39,13 @@ struct BasicValue {
 };
 
 struct UserDefinedValue {
-private:
-    std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > data;
+    // TODO: Ensure uses everywhere
+    using Data = std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > >;
 
-    static auto validate_data(
-        const std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > &data) -> void {
+private:
+    Data data;
+
+    static auto validate_data(const Data &data) -> void {
         const auto contains_name = std::ranges::find_if(data, [](const auto &pair) {
             return pair.first == "name";
         }) != data.end();
@@ -55,20 +59,17 @@ public:
 
     ~UserDefinedValue() = default;
 
-    explicit UserDefinedValue(
-        const std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > &data) : data(data) {
-        validate_data(data);
-        this->data = data;
+    explicit UserDefinedValue(Data data) {
+        set_data(std::move(data));
     }
 
-    auto set_data(
-        const std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > &data) -> void {
+    auto set_data(Data data) -> void {
         validate_data(data);
-        this->data = data;
+        this->data = std::move(data);
     }
 
     [[nodiscard]]
-    auto get_data() const -> std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > const & {
+    auto get_data() const -> Data const & {
         return data;
     }
 
@@ -97,7 +98,8 @@ public:
 
 struct Node {
     int id{};
-    std::variant<BasicValue, UserDefinedValue> data;
+    using Data = std::variant<BasicValue, UserDefinedValue>;
+    Data data;
 
     [[nodiscard]]
     auto toString() -> std::string {
@@ -136,7 +138,6 @@ struct Edge {
     int from{};
     int to{};
 };
-
 
 struct Graph {
     std::string name;
@@ -232,5 +233,4 @@ public:
     auto add_edge(Edge &edge) const -> void;
 };
 
-
-#endif //GRAPH_HPP
+#endif //DATABASE_HPP
