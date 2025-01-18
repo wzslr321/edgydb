@@ -301,20 +301,15 @@ auto Query::handle_select_where(Database &db) const -> void {
                 if (it == fields.end()) return false;
 
                 const auto &field_value = std::get<BasicValue>(it->second).toString();
-                return (condition.comparator == "EQ" && field_value == condition.value) ||
-                       (condition.comparator == "NEQ" && field_value != condition.value);
+                return condition.comparator.compare(field_value, condition.value);
             };
 
             bool result = evaluate_condition(condition_group.conditions.front());
             for (size_t i = 0; i < condition_group.operators.size(); ++i) {
-                const auto &op = condition_group.operators[i];
+                const auto &logical_operator = condition_group.operators[i];
                 const auto &condition = condition_group.conditions[i + 1];
 
-                if (op == "AND") {
-                    result = result && evaluate_condition(condition);
-                } else if (op == "OR") {
-                    result = result || evaluate_condition(condition);
-                }
+                result = logical_operator.apply(result, evaluate_condition(condition));
             }
 
             return result;
