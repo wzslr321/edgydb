@@ -147,7 +147,7 @@ void repl(Database &db) {
         fmt::print("> ");
         std::string command;
         std::getline(std::cin, command);
-        command = Utils::trim_leading_spaces(command);
+        command = Utils::removeConsecutiveSpaces(command);
         if (rg::contains(exit_commands, command)) break;
         if (command == "help") {
             display_help();

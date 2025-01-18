@@ -41,12 +41,24 @@ struct Utils {
         return {start, end + 1};
     }
 
-    // TODO: Check if its usage can be replaced with `trim` if it is okay to trim at the end as well
-    static auto trim_leading_spaces(const std::string &str) -> std::string {
-        const auto it = std::ranges::find_if(str, [](const unsigned char ch) {
-            return !std::isspace(ch);
-        });
-        return {it, str.end()};
+    static auto removeConsecutiveSpaces(const std::string &input) -> std::string {
+        const auto trimmed = trim(input);
+        std::string result;
+        int braceCount = 0;
+
+        for (char c: trimmed) {
+            if (c == '{') {
+                braceCount++;
+            } else if (c == '}') {
+                braceCount--;
+            }
+
+            if (braceCount > 0 || !std::isspace(c) || (result.empty() || !std::isspace(result.back()))) {
+                result += c;
+            }
+        }
+
+        return result;
     }
 
     static auto get_rest_of_space_separated_string(
