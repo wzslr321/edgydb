@@ -8,6 +8,7 @@
 #include <variant>
 #include <vector>
 #include <ranges>
+#include <sstream>
 
 #include "Logger.hpp"
 #include "fmt/core.h"
@@ -65,6 +66,26 @@ public:
     get_data() const {
         return data;
     }
+
+    [[nodiscard]] std::string toString() const {
+        std::ostringstream oss;
+        oss << "{ ";
+        for (size_t i = 0; i < data.size(); ++i) {
+            const auto &[key, value] = data[i];
+            oss << "\"" << key << "\": ";
+            std::visit(
+                [&oss](const auto &v) {
+                    oss << v.toString();
+                },
+                value
+            );
+            if (i + 1 < data.size()) {
+                oss << ", ";
+            }
+        }
+        oss << " }";
+        return oss.str();
+    }
 };
 
 namespace rg = std::ranges;
@@ -72,6 +93,38 @@ namespace rg = std::ranges;
 struct Node {
     int id{};
     std::variant<BasicValue, UserDefinedValue> data;
+
+    // TODO: ogarnij te pojebane to stringi
+    [[nodiscard]] std::string toString() const {
+        std::ostringstream oss;
+        oss << "Node { id: " << id << ", data: ";
+
+        std::visit(
+            [&oss]<typename T0>(const T0 &value) {
+                using T = std::decay_t<T0>;
+                if constexpr (std::is_same_v<T, BasicValue>) {
+                    oss << value.toString();
+                } else if constexpr (std::is_same_v<T, UserDefinedValue>) {
+                    oss << "{ ";
+                    for (const auto &[key, sub_value]: value.get_data()) {
+                        oss << key << ": ";
+                        std::visit(
+                            [&oss](const auto &sub) {
+                                oss << sub.toString();
+                            },
+                            sub_value
+                        );
+                        oss << ", ";
+                    }
+                    oss << "}";
+                }
+            },
+            data
+        );
+
+        oss << " }";
+        return oss.str();
+    }
 };
 
 struct Edge {
@@ -89,7 +142,7 @@ struct Graph {
     std::vector<Edge> edges;
 
     template<std::predicate<const Node &> Predicate>
-    [[nodiscard]] std::vector<Node> find_nodes_where(Predicate predicate);
+    [[nodiscard]] std::vector<std::reference_wrapper<Node> > find_nodes_where(Predicate predicate);
 };
 
 enum class IOResultStatus {
@@ -143,6 +196,10 @@ class Query {
     auto handle_select(Database &db) const -> void;
 
     auto handle_update_node(Database &db, bool isComplex) const -> void;
+
+    auto handle_is_connected(Database &db, bool direct) const -> void;
+
+    auto handle_select_node(Database &db) -> Node &;
 
 public:
     auto handle(Database &db) const -> void;

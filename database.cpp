@@ -9,6 +9,7 @@
 #include <ranges>
 #include <algorithm>
 #include <numeric>
+#include <unordered_set>
 
 #include "deserialization.hpp"
 #include "serialization.hpp"
@@ -19,9 +20,16 @@ namespace rg = std::ranges;
 
 
 template<std::predicate<const Node &> Predicate>
-auto Graph::find_nodes_where(Predicate predicate) -> std::vector<Node> {
-    auto filtered_nodes = nodes | std::views::filter(predicate);
-    return std::vector<Node>(filtered_nodes.begin(), filtered_nodes.end());
+auto Graph::find_nodes_where(Predicate predicate) -> std::vector<std::reference_wrapper<Node> > {
+    std::vector<std::reference_wrapper<Node> > result;
+
+    for (auto &node: nodes) {
+        if (predicate(node)) {
+            result.emplace_back(node);
+        }
+    }
+
+    return result;
 }
 
 
@@ -167,6 +175,17 @@ auto Query::from_string(const std::string &query) -> std::optional<Query> {
         }
         std::cerr << "Only USE command can have a single argument";
         return std::nullopt;
+    }
+
+    if (words.size() == 5 && words[0] == "IS" && words[2] == "CONNECTED" && words[3] == "TO") {
+        commands.emplace_back("IS CONNECTED", words[1] + " " + words[4]);
+        return Query(std::move(commands));
+    }
+
+    if (words.size() == 6 && words[0] == "IS" && words[2] == "CONNECTED" && words[3] == "TO" && words[4] ==
+        "DIRECTLY") {
+        commands.emplace_back("IS CONNECTED DIRECTLY", words[1] + " " + words[5]);
+        return Query(std::move(commands));
     }
 
     if (words.size() == 3) {
@@ -317,6 +336,20 @@ auto Query::handle_insert_edge(Database &db) const -> void {
 
 auto Query::handle_select(Database &db) const -> void {
     logger.debug("SELECT NODE started");
+    const auto command = this->commands.front().value;
+    try {
+        auto id = std::stoi(command);
+        auto nodes = db.get_graph().find_nodes_where([&](const auto &node) {
+            return node.id == id;
+        });
+        if (nodes.empty()) {
+            std::cerr << std::format("No node found with id {}", id) << std::endl;
+        } else {
+            fmt::print("Found node with id {}\n{}\n", nodes.size(), nodes.front().get().toString());
+        }
+    } catch (std::invalid_argument &e) {
+        std::cerr << "Failed to select node. Node id is not valid integer" << std::endl;
+    }
 }
 
 auto Query::handle_update_node(Database &db, bool isComplex) const -> void {
@@ -351,6 +384,63 @@ auto Query::handle_update_node(Database &db, bool isComplex) const -> void {
     }
 }
 
+auto Query::handle_is_connected(Database &db, bool direct) const -> void {
+    logger.debug("IS CONNECTED started");
+    const auto command = this->commands.front().value;
+    const auto node_ids = command | std::views::split(' ') | std::ranges::to<std::vector<std::string> >();
+
+    try {
+        const auto node1_id = std::stoi(node_ids[0]);
+        const auto node2_id = std::stoi(node_ids[1]);
+
+        auto &graph = db.get_graph();
+
+        if (direct) {
+            bool connected = std::ranges::any_of(graph.edges, [&](const Edge &edge) {
+                return (edge.from == node1_id && edge.to == node2_id) ||
+                       (edge.from == node2_id && edge.to == node1_id);
+            });
+
+            fmt::print("Nodes {} and {} are {}directly connected.\n",
+                       node1_id, node2_id, connected ? "" : "not ");
+        } else {
+            std::unordered_set<int> visited;
+            std::queue<int> to_visit;
+            to_visit.push(node1_id);
+
+            bool connected = false;
+            while (!to_visit.empty()) {
+                int current = to_visit.front();
+                to_visit.pop();
+
+                if (current == node2_id) {
+                    connected = true;
+                    break;
+                }
+
+                if (visited.contains(current)) {
+                    continue;
+                }
+
+                visited.insert(current);
+                for (const auto &edge: graph.edges) {
+                    if (edge.from == current && !visited.contains(edge.to)) {
+                        to_visit.push(edge.to);
+                    }
+                    if (edge.to == current && !visited.contains(edge.from)) {
+                        to_visit.push(edge.from);
+                    }
+                }
+            }
+
+            fmt::print("Nodes {} and {} are {}connected.\n",
+                       node1_id, node2_id, connected ? "" : "not ");
+        }
+    } catch (std::invalid_argument &) {
+        std::cerr << "Failed to parse node IDs. Ensure they are valid integers.\n";
+    }
+}
+
 auto Query::handle(Database &db) const -> void {
     const auto &first_command = commands.front();
     logger.debug(std::format("Started attempt to handle query with first command: {}", first_command.keyword));
@@ -380,6 +470,12 @@ auto Query::handle(Database &db) const -> void {
     }
     if (first_command.keyword == "INSERT EDGE FROM TO") {
         return handle_insert_edge(db);
+    }
+    if (first_command.keyword == "IS CONNECTED") {
+        return handle_is_connected(db, false);
+    }
+    if (first_command.keyword == "IS CONNECTED DIRECTLY") {
+        return handle_is_connected(db, true);
     }
     throw std::invalid_argument("Unknown command");
 }

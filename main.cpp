@@ -84,7 +84,7 @@ int Logger::trace_level = 0;
 // UPDATE NODE [node.id] TO COMPLEX [data] ✅
 //
 // Wyświetla dane zawarte w node o danym id. Przykład: SELECT NODE 1
-// SELECT NODE [node.id] ❌
+// SELECT NODE [node.id] ✅
 //
 // Wyświetla wszystkie node wraz z danymi, które spełniają dany warunek.
 // Przykład: SELECT NODE WHERE "pozycja" EQ "menadżer"
