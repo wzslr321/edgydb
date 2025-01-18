@@ -158,7 +158,6 @@ struct DatabaseConfig {
 };
 
 struct Command {
-    std::vector<std::unique_ptr<Command> > next{};
     std::string keyword;
     std::string value;
 

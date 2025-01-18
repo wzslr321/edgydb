@@ -12,7 +12,7 @@
 class Logger {
     std::string name;
     fmt::rgb name_color;
-    static int trace_level;
+    inline static int log_level = 0;
 
     static auto generate_color_from_name(const std::string &name) -> fmt::rgb {
         constexpr std::hash<std::string> hasher;
@@ -47,8 +47,8 @@ public:
         : name(logger_name), name_color(generate_color_from_name(logger_name)) {
     }
 
-    static auto set_trace_level(const int level) -> void {
-        trace_level = level;
+    static auto set_log_level(const int level) -> void {
+        log_level = level;
     }
 
     auto info(const std::string &message) const -> void {
@@ -65,7 +65,7 @@ public:
     }
 
     auto debug(const std::string &message) const -> void {
-        if (trace_level >= 1) {
+        if (log_level >= 1) {
             print_with_color("DEBUG", fmt::color::gray, message);
         }
     }

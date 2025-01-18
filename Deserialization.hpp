@@ -172,7 +172,7 @@ struct Deserialization {
     }
 
     static auto parse_graph(const std::string &json, size_t &pos) -> Graph {
-        logger.info(std::format("Parsing of graph started at pos {}", pos));
+        logger.debug(std::format("Parsing of graph started at pos {}", pos));
         if (json[pos] != '{') throw std::runtime_error("Expected object");
         ++pos;
 
