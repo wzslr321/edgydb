@@ -75,7 +75,6 @@ struct Node {
 };
 
 struct Edge {
-    int id{};
     int from{};
     int to{};
     // TODO:: possibly remove
@@ -174,7 +173,7 @@ public:
 
     auto execute_query(const Query &query) -> void;
 
-    auto get_graph() const -> const Graph &;
+    auto get_graph() const -> Graph &;
 
     auto get_graphs() -> std::vector<Graph> &;
 
@@ -183,6 +182,12 @@ public:
     auto set_graph(Graph &graph) -> void;
 
     auto add_node(Node &node) const -> void;
+
+    auto add_edge(Edge &edge) const -> void;
+
+    auto update_node(Node &node) -> void;
+
+    // auto find_node(const int id) -> std::optional<Node &>;
 };
 
 

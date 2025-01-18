@@ -4,6 +4,7 @@
 
 #include "database.hpp"
 #include "Logger.hpp"
+#include "Utils.hpp"
 
 void repl(Database &db);
 
@@ -73,7 +74,7 @@ int Logger::trace_level = 0;
 // Przykład: INSERT NODE COMPLEX {"name":"pracownik", "wiek":40, "pensja": 1000, "imię":"Marcin", "przyjaciel": {"name":"pracownik", "wiek":42, "pensja": 1200, "imię":"Paweł"}}
 //
 // Dodaje połączenie między node'ami, bazując na przekazanym ich id. Przykład: INSERT EDGE FROM 1 to 2
-// INSERT EDGE FROM [node.id] TO [node.id] ❌
+// INSERT EDGE FROM [node.id] TO [node.id] ✅
 //
 // Aktualizuje dane przechowywane w node o danym id na pryumitywne dane. Przykład: UPDATE NODE 1 TO "Krzysztof"
 // UPDATE NODE [node.id] TO [data] ❌
@@ -120,22 +121,14 @@ auto main(const int argc, char *argv[]) -> int {
     }
     Logger::set_trace_level(trace_level);
 
-    //
     const auto db_config = DatabaseConfig(100);
     auto db = Database(db_config);
     repl(db);
-    return 0;
+
+    return EXIT_SUCCESS;
 }
 
 void display_help();
-
-
-std::string trim_leading_spaces(const std::string &str) {
-    const auto it = std::ranges::find_if(str, [](const unsigned char ch) {
-        return !std::isspace(ch);
-    });
-    return std::string(it, str.end());
-}
 
 
 void repl(Database &db) {
@@ -150,7 +143,7 @@ void repl(Database &db) {
         fmt::print("> ");
         std::string command;
         std::getline(std::cin, command);
-        command = trim_leading_spaces(command);
+        command = Utils::trim_leading_spaces(command);
         if (rg::contains(exit_commands, command)) break;
         if (command == "help") {
             display_help();

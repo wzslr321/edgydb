@@ -117,18 +117,17 @@ public:
     }
 
     static std::string serialize_edge(const Edge &edge) {
-        logger.debug(std::format("Edge serialization started for edge with id {}", edge.id));
+        logger.debug(std::format("Edge serialization started for edge from {} to ", edge.from, edge.to));
 
         std::ostringstream result;
         result << "{";
-        result << "\"id\":" << edge.id << ",";
         result << "\"from\":" << edge.from << ",";
         result << "\"to\":" << edge.to << ",";
         result << R"("relation":")" << escape_json(edge.relation) << "\"";
         result << "}";
 
-        logger.debug(std::format("Edge serialization completed for edge with id {}. Result: {}", edge.id,
-                                 result.str()));
+        logger.debug(std::format("Edge serialization completed for edge with from {} to {}. Result: {}", edge.from,
+                                 edge.to, result.str()));
         return result.str();
     }
 

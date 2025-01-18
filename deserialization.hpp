@@ -159,9 +159,7 @@ struct Deserialization {
             if (json[pos] != ':') throw std::runtime_error("Expected ':' after key");
             ++pos;
 
-            if (key == "id") {
-                edge.id = parse_int(json, pos);
-            } else if (key == "from") {
+            if (key == "from") {
                 edge.from = parse_int(json, pos);
             } else if (key == "to") {
                 edge.to = parse_int(json, pos);
@@ -173,7 +171,7 @@ struct Deserialization {
         }
         if (pos >= json.size() || json[pos] != '}') throw std::runtime_error("Unterminated object");
         ++pos;
-        logger.debug(std::format("Deserialization for Edge with id {} finished", edge.id));
+        logger.debug(std::format("Deserialization for Edge from {} to {} finished", edge.from, edge.to));
         return edge;
     }
 

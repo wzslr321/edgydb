@@ -5,6 +5,7 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 #include <string>
+#include <numeric>
 
 struct Utils {
     static std::string minifyJson(const std::string &json) {
@@ -28,6 +29,20 @@ struct Utils {
         }
 
         return result;
+    }
+
+    static std::string trim_leading_spaces(const std::string &str) {
+        const auto it = std::ranges::find_if(str, [](const unsigned char ch) {
+            return !std::isspace(ch);
+        });
+        return std::string(it, str.end());
+    }
+
+    static std::string get_rest_of_space_separated_string(const std::vector<std::string> &str, const int start) {
+        return std::accumulate(str.begin() + start, str.end(), std::string{},
+                               [](const std::string &a, const std::string &b) {
+                                   return a.empty() ? b : a + " " + b;
+                               });
     }
 };
 

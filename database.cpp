@@ -13,6 +13,7 @@
 #include "deserialization.hpp"
 #include "serialization.hpp"
 #include "Utils.hpp"
+#include "fmt/compile.h"
 
 namespace rg = std::ranges;
 
@@ -22,6 +23,7 @@ auto Graph::find_nodes_where(Predicate predicate) -> std::vector<Node> {
     auto filtered_nodes = nodes | std::views::filter(predicate);
     return std::vector<Node>(filtered_nodes.begin(), filtered_nodes.end());
 }
+
 
 auto Database::set_graph(Graph &graph) -> void {
     this->current_graph = &graph;
@@ -35,6 +37,31 @@ auto Database::add_node(Node &node) const -> void {
     logger.info(std::format("Adding node with id {} to the graph with name {}", node.id, this->current_graph->name));
     this->current_graph->nodes.emplace_back(node);
 }
+
+auto Database::add_edge(Edge &edge) const -> void {
+    if (this->current_graph == nullptr) {
+        std::cerr << "To execute queries first specify graph with USE command" << std::endl;
+        return;
+    }
+    logger.info(std::format("Adding edge from {} to {}", edge.from, edge.to));
+    this->current_graph->edges.emplace_back(edge);
+}
+
+auto Database::update_node(Node &node) -> void {
+}
+
+/*
+auto Database::find_node(const int id) -> std::optional<Node &> {
+auto result = this->current_graph->find_nodes_where([id](const Node &node) {
+    return node.id == id;
+});
+if (!result.empty()) {
+    return result.front();
+}
+
+return std::nullopt;
+}
+*/
 
 Database::Database(const DatabaseConfig config) : config(config) {
     try {
@@ -57,7 +84,7 @@ Database::Database(const DatabaseConfig config) : config(config) {
     }
 }
 
-auto Database::get_graph() const -> const Graph & {
+auto Database::get_graph() const -> Graph & {
     return *this->current_graph;
 }
 
@@ -177,15 +204,23 @@ auto Query::from_string(const std::string &query) -> std::optional<Query> {
 
     if (words.size() >= 4) {
         if (words[0] == "INSERT" && words[1] == "NODE" && words[2] == "COMPLEX") {
-            auto rest = std::accumulate(words.begin() + 3, words.end(), std::string{},
-                                        [](const std::string &a, const std::string &b) {
-                                            return a.empty() ? b : a + " " + b;
-                                        });
+            const auto rest = Utils::get_rest_of_space_separated_string(words, 3);
             commands.emplace_back("INSERT NODE COMPLEX", Utils::minifyJson(rest));
+            return Query(std::move(commands));
+        }
+        if (words.size() == 6 && words[0] == "INSERT" && words[1] == "EDGE" && words[2] == "FROM" && words[4] == "TO") {
+            auto val = words[3] + " " + words[5];
+            commands.emplace_back("INSERT EDGE FROM TO", val);
+            return Query(std::move(commands));
+        }
+        if (words.size() == 5 && words[0] == "UPDATE" && words[1] == "NODE" && words[3] == "TO") {
+            auto val = words[2] + " " + Utils::get_rest_of_space_separated_string(words, 4);
+            commands.emplace_back("UPDATE NODE TO", val);
             return Query(std::move(commands));
         }
         throw std::invalid_argument("Invalid query");
     }
+
 
     // SELECT NODE WHERE id >/</==
     if (words.size() == 5) {
@@ -261,6 +296,16 @@ auto Query::handle_insert_complex_node(Database &db) const -> void {
 
 auto Query::handle_insert_edge(Database &db) const -> void {
     logger.debug("INSERT EDGE started");
+    auto command = this->commands.front().value;
+    const auto node_ids = command | std::views::split(' ') | std::ranges::to<std::vector<std::string> >();
+    try {
+        const auto from_id = std::stoi(node_ids[0]);
+        const auto to_id = std::stoi(node_ids[1]);
+        Edge edge = {from_id, to_id};
+        db.add_edge(edge);
+    } catch (std::invalid_argument &e) {
+        std::cerr << "Failed to insert edge. Node id is not valid integer" << std::endl;
+    }
 }
 
 auto Query::handle_select(Database &db) const -> void {
@@ -269,6 +314,27 @@ auto Query::handle_select(Database &db) const -> void {
 
 auto Query::handle_update_node(Database &db) const -> void {
     logger.debug("UPDATE NODE started");
+    auto value = this->commands.front().value;
+    auto parts = value | std::views::split(' ') | std::ranges::to<std::vector<std::string> >();
+    auto new_value = Utils::get_rest_of_space_separated_string(parts, 1);
+    try {
+        const auto node_id = std::stoi(parts[0]);
+        Node *matched_node = nullptr;
+        for (auto &node: db.get_graph().nodes) {
+            if (node_id == node.id) {
+                matched_node = &node;
+            }
+        }
+        if (matched_node != nullptr) {
+            size_t pos = 0;
+            matched_node->data = Deserialization::parse_value(new_value, pos);
+            logger.info(std::format("Successfully updated node with id {}", node_id));
+        } else {
+            std::cerr << "Update failed. No node found with given id" << std::endl;
+        }
+    } catch (std::invalid_argument &e) {
+        std::cerr << "Failed to update node. Node id is not valid integer" << std::endl;
+    }
 }
 
 auto Query::handle(Database &db) const -> void {
@@ -289,11 +355,14 @@ auto Query::handle(Database &db) const -> void {
     if (first_command.keyword == "INSERT EDGE") {
         return handle_insert_edge(db);
     }
-    if (first_command.keyword == "UPDATE NODE") {
+    if (first_command.keyword == "UPDATE NODE TO") {
         return handle_update_node(db);
     }
     if (first_command.keyword == "SELECT NODE") {
         return handle_select(db);
+    }
+    if (first_command.keyword == "INSERT EDGE FROM TO") {
+        return handle_insert_edge(db);
     }
     throw std::invalid_argument("Unknown command");
 }
