@@ -18,23 +18,25 @@ struct Comparator {
 
     explicit Comparator(const std::string &value) {
         if (!is_valid(value)) {
-            throw std::invalid_argument("Invalid comparator: " + value);
+            throw std::invalid_argument(std::format("Invalid comparator:{}", value));
         }
         this->value = value;
     }
 
-    static bool is_valid(const std::string &value) {
-        return std::ranges::find(valid_values, value) != valid_values.end();
+    [[nodiscard]]
+    static auto is_valid(const std::string &value) -> bool {
+        return std::ranges::contains(valid_values, value);
     }
 
-    bool compare(const std::string &left, const std::string &right) const {
+    [[nodiscard]]
+    auto compare(const std::string &left, const std::string &right) const -> bool {
         if (value == "EQ") {
             return left == right;
         }
         if (value == "NEQ") {
             return left != right;
         }
-        throw std::logic_error("Unsupported comparator: " + value);
+        throw std::logic_error(std::format("Unsupported comparator:{}", value));
     }
 };
 
@@ -45,23 +47,25 @@ struct LogicalOperator {
 
     explicit LogicalOperator(const std::string &value) {
         if (!is_valid(value)) {
-            throw std::invalid_argument("Invalid logical operator: " + value);
+            throw std::invalid_argument(std::format("Invalid logical operator: {}", value));
         }
         this->value = value;
     }
 
-    static bool is_valid(const std::string &value) {
-        return std::ranges::find(valid_values, value) != valid_values.end();
+    [[nodiscard]]
+    static auto is_valid(const std::string &value) -> bool {
+        return std::ranges::contains(valid_values, value);
     }
 
-    bool apply(const bool left, const bool right) const {
+    [[nodiscard]]
+    auto apply(const bool left, const bool right) const -> bool {
         if (value == "AND") {
             return left && right;
         }
         if (value == "OR") {
             return left || right;
         }
-        throw std::logic_error("Unsupported logical operator: " + value);
+        throw std::logic_error(std::format("Unsupported logical operator: {}", value));
     }
 };
 
@@ -83,6 +87,7 @@ struct ConditionGroup {
     std::vector<LogicalOperator> operators;
 };
 
+// TODO: Possibly move to separate Condition.cpp to omit inline specifier
 inline ConditionGroup parse_conditions(const std::string &condition_str) {
     ConditionGroup group;
     std::istringstream stream(condition_str);
@@ -101,7 +106,7 @@ inline ConditionGroup parse_conditions(const std::string &condition_str) {
         group.conditions.push_back(condition);
 
         if (stream >> token) {
-            group.operators.emplace_back(LogicalOperator(token));
+            group.operators.emplace_back(token);
         }
     }
 

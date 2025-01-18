@@ -4,34 +4,30 @@
 
 #ifndef UTILS_HPP
 #define UTILS_HPP
+
 #include <string>
 #include <numeric>
 
 struct Utils {
-    static std::string minifyJson(const std::string &json) {
+    static auto minify_json(const std::string &json) -> std::string {
         std::string result;
-        bool inString = false;
+        bool in_string = false;
 
-        for (size_t i = 0; i < json.size(); ++i) {
-            char current = json[i];
-
+        for (const auto current: json) {
             if (current == '"') {
-                inString = !inString;
+                in_string = !in_string;
             }
 
-            if (inString) {
+            const auto is_not_space = !std::isspace(static_cast<unsigned char>(current));
+            if (in_string || is_not_space) {
                 result += current;
-            } else {
-                if (!std::isspace(static_cast<unsigned char>(current))) {
-                    result += current;
-                }
             }
         }
 
         return result;
     }
 
-    static std::string trim(const std::string &str) {
+    static auto trim(const std::string &str) -> std::string {
         auto start = str.begin();
         while (start != str.end() && std::isspace(*start)) {
             ++start;
@@ -42,17 +38,20 @@ struct Utils {
             --end;
         } while (std::distance(start, end) > 0 && std::isspace(*end));
 
-        return std::string(start, end + 1);
+        return {start, end + 1};
     }
 
-    static std::string trim_leading_spaces(const std::string &str) {
+    // TODO: Check if its usage can be replaced with `trim` if it is okay to trim at the end as well
+    static auto trim_leading_spaces(const std::string &str) -> std::string {
         const auto it = std::ranges::find_if(str, [](const unsigned char ch) {
             return !std::isspace(ch);
         });
-        return std::string(it, str.end());
+        return {it, str.end()};
     }
 
-    static std::string get_rest_of_space_separated_string(const std::vector<std::string> &str, const int start) {
+    static auto get_rest_of_space_separated_string(
+        const std::vector<std::string> &str,
+        const int start) -> std::string {
         return std::accumulate(str.begin() + start, str.end(), std::string{},
                                [](const std::string &a, const std::string &b) {
                                    return a.empty() ? b : a + " " + b;

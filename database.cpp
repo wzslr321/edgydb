@@ -11,7 +11,7 @@
 #include <numeric>
 #include <unordered_set>
 
-#include "condition.hpp"
+#include "Condition.hpp"
 #include "deserialization.hpp"
 #include "serialization.hpp"
 #include "Utils.hpp"
@@ -210,7 +210,7 @@ auto Query::from_string(const std::string &query) -> std::optional<Query> {
         // ensure size checks as json spaces may conflict
         if (words[0] == "INSERT" && words[1] == "NODE" && words[2] == "COMPLEX") {
             const auto rest = Utils::get_rest_of_space_separated_string(words, 3);
-            commands.emplace_back("INSERT NODE COMPLEX", Utils::minifyJson(rest));
+            commands.emplace_back("INSERT NODE COMPLEX", Utils::minify_json(rest));
             return Query(std::move(commands));
         }
         if (words.size() == 6 && words[0] == "INSERT" && words[1] == "EDGE" && words[2] == "FROM" && words[4] == "TO") {
@@ -407,7 +407,7 @@ auto Query::handle_update_node(Database &db, bool isComplex) const -> void {
             std::variant<BasicValue, UserDefinedValue> value;
             if (isComplex) {
                 value = Deserialization::parse_user_defined_value(
-                    Utils::minifyJson(new_value), pos);
+                    Utils::minify_json(new_value), pos);
             } else {
                 value = Deserialization::parse_value(new_value, pos);
             }
