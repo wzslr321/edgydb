@@ -4,7 +4,6 @@
 #ifndef GRAPH_HPP
 #define GRAPH_HPP
 
-#include <iomanip>
 #include <string>
 #include <variant>
 #include <vector>
@@ -16,11 +15,14 @@
 
 class Database;
 
+namespace rg = std::ranges;
 
 struct BasicValue {
     std::variant<int, double, bool, std::string> data;
 
-    [[nodiscard]] std::string toString() const {
+    // TODO: Simplify those awful toString
+    [[nodiscard]]
+    auto toString() const -> std::string {
         return std::visit([]<typename T0>(const T0 &arg) -> std::string {
             using T = std::decay_t<T0>;
             if constexpr (std::same_as<T, bool>) {
@@ -38,8 +40,8 @@ struct UserDefinedValue {
 private:
     std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > data;
 
-    static void validate_data(
-        const std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > &data) {
+    static auto validate_data(
+        const std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > &data) -> void {
         const auto contains_name = std::ranges::find_if(data, [](const auto &pair) {
             return pair.first == "name";
         }) != data.end();
@@ -59,17 +61,19 @@ public:
         this->data = data;
     }
 
-    void set_data(const std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > &data) {
+    auto set_data(
+        const std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > &data) -> void {
         validate_data(data);
         this->data = data;
     }
 
-    [[nodiscard]] const std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > &
-    get_data() const {
+    [[nodiscard]]
+    auto get_data() const -> std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > > const & {
         return data;
     }
 
-    [[nodiscard]] std::string toString() const {
+    [[nodiscard]]
+    auto toString() const -> std::string {
         std::ostringstream oss;
         oss << "{ ";
         for (size_t i = 0; i < data.size(); ++i) {
@@ -90,14 +94,13 @@ public:
     }
 };
 
-namespace rg = std::ranges;
 
 struct Node {
     int id{};
     std::variant<BasicValue, UserDefinedValue> data;
 
-    // TODO: ogarnij te pojebane to stringi
-    [[nodiscard]] std::string toString() const {
+    [[nodiscard]]
+    auto toString() -> std::string {
         std::ostringstream oss;
         oss << "Node { id: " << id << ", data: ";
 
@@ -132,8 +135,6 @@ struct Node {
 struct Edge {
     int from{};
     int to{};
-    // TODO:: possibly remove
-    std::string relation;
 };
 
 
@@ -144,21 +145,8 @@ struct Graph {
     std::vector<Edge> edges;
 
     template<std::predicate<const Node &> Predicate>
-    [[nodiscard]] std::vector<std::reference_wrapper<Node> > find_nodes_where(Predicate predicate);
-};
-
-enum class IOResultStatus {
-    Success,
-    Failure,
-};
-
-struct IOResult {
-    std::string message;
-    IOResultStatus status;
-
-    explicit IOResult(std::string message, const IOResultStatus status): message(std::move(message)),
-                                                                         status(status) {
-    }
+    [[nodiscard]]
+    auto find_nodes_where(Predicate predicate) -> std::vector<std::reference_wrapper<Node> >;
 };
 
 struct DatabaseConfig {
@@ -181,13 +169,13 @@ struct Command {
 class Query {
     std::vector<Command> commands{};
 
-    static Logger logger;
+    inline static auto logger = Logger("Query");
 
     explicit Query(std::vector<Command> commands);
 
     auto handle_use(Database &db) const -> void;
 
-    auto handle_select_where(Database &db) const -> void;
+    auto handle_select_where(const Database &db) const -> void;
 
     auto handle_create_graph(Database &db) const -> void;
 
@@ -195,13 +183,13 @@ class Query {
 
     auto handle_insert_complex_node(Database &db) const -> void;
 
-    auto handle_insert_edge(Database &db) const -> void;
+    auto handle_insert_edge(const Database &db) const -> void;
 
-    auto handle_select(Database &db) const -> void;
+    auto handle_select(const Database &db) const -> void;
 
     auto handle_update_node(Database &db, bool isComplex) const -> void;
 
-    auto handle_is_connected(Database &db, bool direct) const -> void;
+    auto handle_is_connected(const Database &db, bool direct) const -> void;
 
 public:
     auto handle(Database &db) const -> void;
@@ -217,11 +205,11 @@ class Database {
     std::vector<Graph> graphs{};
     Graph *current_graph = nullptr;
 
-    static Logger logger;
+    static inline auto logger = Logger("Database");
 
     int unsynchronized_queries_count = 0;
 
-    auto sync_with_storage() -> IOResult;
+    auto sync_with_storage() -> void;
 
 public:
     int current_id = 0;

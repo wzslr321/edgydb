@@ -14,7 +14,7 @@ class Logger {
     fmt::rgb name_color;
     static int trace_level;
 
-    static fmt::rgb generate_color_from_name(const std::string &name) {
+    static auto generate_color_from_name(const std::string &name) -> fmt::rgb {
         constexpr std::hash<std::string> hasher;
         const size_t hash = hasher(name);
 
@@ -30,11 +30,13 @@ class Logger {
         return fmt::rgb{r, g, b};
     }
 
-    [[nodiscard]] std::string format_message(const std::string &level, const std::string &message) const {
+    [[nodiscard]]
+    auto format_message(const std::string &level, const std::string &message) const -> std::string {
         return fmt::format("[{}] [{}] {}", level, name, message);
     }
 
-    void print_with_color(const std::string &level, const fmt::rgb &level_color, const std::string &message) const {
+    auto print_with_color(const std::string &level, const fmt::rgb &level_color,
+                          const std::string &message) const -> void {
         fmt::print(fg(level_color), "[{}] ", level);
         fmt::print(fg(name_color), "[{}] ", name);
         fmt::print("{}\n", message);
@@ -45,23 +47,24 @@ public:
         : name(logger_name), name_color(generate_color_from_name(logger_name)) {
     }
 
-    static void set_trace_level(const int level) {
+    static auto set_trace_level(const int level) -> void {
         trace_level = level;
     }
 
-    void info(const std::string &message) const {
+    auto info(const std::string &message) const -> void {
         print_with_color("INFO", fmt::color::light_green, message);
     }
 
-    void warning(const std::string &message) const {
+    // TODO: Possibly remove as it is not used as of now
+    auto warning(const std::string &message) const -> void {
         print_with_color("WARNING", fmt::color::yellow, message);
     }
 
-    void error(const std::string &message) const {
+    auto error(const std::string &message) const -> void {
         print_with_color("ERROR", fmt::color::red, message);
     }
 
-    void debug(const std::string &message) const {
+    auto debug(const std::string &message) const -> void {
         if (trace_level >= 1) {
             print_with_color("DEBUG", fmt::color::gray, message);
         }

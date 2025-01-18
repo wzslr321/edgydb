@@ -161,8 +161,6 @@ struct Deserialization {
                 edge.from = parse_int(json, pos);
             } else if (key == "to") {
                 edge.to = parse_int(json, pos);
-            } else if (key == "relation") {
-                edge.relation = std::get<std::string>(BasicValue(parse_value(json, pos)).data);
             }
 
             if (json[pos] == ',') ++pos;

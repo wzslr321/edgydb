@@ -8,17 +8,14 @@
 #include <iostream>
 #include <ranges>
 #include <algorithm>
-#include <numeric>
 #include <unordered_set>
 
 #include "Condition.hpp"
 #include "Deserialization.hpp"
 #include "Serialization.hpp"
 #include "Utils.hpp"
-#include "fmt/compile.h"
 
 namespace rg = std::ranges;
-
 
 template<std::predicate<const Node &> Predicate>
 auto Graph::find_nodes_where(Predicate predicate) -> std::vector<std::reference_wrapper<Node> > {
@@ -32,7 +29,6 @@ auto Graph::find_nodes_where(Predicate predicate) -> std::vector<std::reference_
 
     return result;
 }
-
 
 auto Database::set_graph(Graph &graph) -> void {
     this->current_graph = &graph;
@@ -97,51 +93,49 @@ auto Database::add_graph(Graph &graph) -> void {
     }
 }
 
-// TODO: Maybe just throw instead of IOResult
-auto Database::sync_with_storage() -> IOResult {
+auto Database::sync_with_storage() -> void {
     try {
-        std::ofstream file("database_snapshot.json", std::ios::binary);
+        std::ofstream file("database_snapshot.json");
         if (!file.is_open()) {
-            return IOResult("Failed to open file for writing", IOResultStatus::Failure);
+            throw std::runtime_error("Failed to open file for writing");
         }
 
         file << Serialization::serialize_database(*this);
         file.close();
 
         unsynchronized_queries_count = 0;
-        return IOResult("Database successfully saved to file", IOResultStatus::Success);
     } catch (const std::exception &e) {
-        return IOResult(std::string("Error during sync: ") + e.what(), IOResultStatus::Failure);
+        throw std::runtime_error(std::format("Error:{}", e.what()));
     }
 }
 
 Database::~Database() {
     logger.info("Attempting to synchronize database before closing");
-    switch (const auto result = sync_with_storage(); result.status) {
-        case IOResultStatus::Success:
-            this->unsynchronized_queries_count = 0;
-            break;
-        default:
-            std::cerr << std::format("Failed to synchronize storage. Error: {}", result.message);
+    try {
+        sync_with_storage();
+        this->unsynchronized_queries_count = 0;
+        logger.info("Database synchronized successfully");
+    } catch (const std::runtime_error &e) {
+        std::cerr << std::format("Failed to synchronize storage. Error: {}", e.what());
     }
 }
-
 
 auto Database::execute_query(const Query &query) -> void {
     query.handle(*this);
 
     this->unsynchronized_queries_count += 1;
     if (this->unsynchronized_queries_count >= this->config.unsynced_queries_limit) {
-        switch (const auto result = sync_with_storage(); result.status) {
-            case IOResultStatus::Success:
-                this->unsynchronized_queries_count = 0;
-                break;
-            default:
-                std::cerr << std::format("Failed to synchronize storage. Error: {}", result.message);
+        try {
+            sync_with_storage();
+            this->unsynchronized_queries_count = 0;
+            logger.info("Database synchronized successfully");
+        } catch (const std::runtime_error &e) {
+            std::cerr << std::format("Failed to synchronize storage. Error: {}", e.what());
         }
     }
 }
 
+// TODO: This quer struct is insanely bad and needs refactor
 Query::Query(std::vector<Command> commands) : commands(std::move(commands)) {
 }
 
@@ -250,11 +244,9 @@ auto Query::from_string(const std::string &query) -> std::optional<Query> {
     return Query(std::move(commands));
 }
 
-// TODO: remove this logger shit
 auto Query::handle_use(Database &db) const -> void {
-    logger.info("Starting handle_use.");
+    logger.debug("USE started");
     auto &graphs = db.get_graphs();
-    logger.info(std::format("Graphs size: {}", graphs.size()));
 
     if (commands.empty()) {
         logger.error("Query commands are empty.");
@@ -262,15 +254,15 @@ auto Query::handle_use(Database &db) const -> void {
     }
 
     const auto &command_value = this->get_commands().front().value;
-    logger.info(std::format("Searching for graph with name: {}", command_value));
+    logger.debug(std::format("Searching for graph with name: {}", command_value));
 
     const auto it = std::ranges::find_if(graphs, [&command_value](const auto &graph) {
         return graph.name == command_value;
     });
 
     if (it != graphs.end()) {
-        logger.info(std::format("Graph found: {}", it->name));
-        db.current_id = it->nodes.size();
+        logger.debug(std::format("Graph found: {}", it->name));
+        db.current_id = static_cast<int>(it->nodes.size());
         db.set_graph(*it);
     } else {
         logger.error("Graph not found.");
@@ -278,8 +270,13 @@ auto Query::handle_use(Database &db) const -> void {
     }
 }
 
-auto Query::handle_select_where(Database &db) const -> void {
+auto Query::handle_select_where(const Database &db) const -> void {
     logger.debug("SELECT NODE WHERE started");
+    if (commands.empty()) {
+        logger.error("Query commands are empty.");
+        throw std::runtime_error("Query has no commands.");
+    }
+
     const auto condition_str = this->commands.front().value;
 
     try {
@@ -294,7 +291,7 @@ auto Query::handle_select_where(Database &db) const -> void {
                 const auto &user_data = std::get<UserDefinedValue>(node.data);
                 const auto &fields = user_data.get_data();
 
-                auto it = std::ranges::find_if(fields, [&condition](const auto &field) {
+                const auto it = std::ranges::find_if(fields, [&condition](const auto &field) {
                     return field.first == condition.field;
                 });
 
@@ -330,7 +327,6 @@ auto Query::handle_select_where(Database &db) const -> void {
     }
 }
 
-
 auto Query::handle_create_graph(Database &db) const -> void {
     logger.debug("CREATE GRAPH started");
     Graph graph = {this->commands.front().value};
@@ -357,7 +353,7 @@ auto Query::handle_insert_complex_node(Database &db) const -> void {
     }
 }
 
-auto Query::handle_insert_edge(Database &db) const -> void {
+auto Query::handle_insert_edge(const Database &db) const -> void {
     logger.debug("INSERT EDGE started");
     auto command = this->commands.front().value;
     const auto node_ids = command | std::views::split(' ') | std::ranges::to<std::vector<std::string> >();
@@ -371,18 +367,18 @@ auto Query::handle_insert_edge(Database &db) const -> void {
     }
 }
 
-auto Query::handle_select(Database &db) const -> void {
+auto Query::handle_select(const Database &db) const -> void {
     logger.debug("SELECT NODE started");
     const auto command = this->commands.front().value;
     try {
         auto id = std::stoi(command);
-        auto nodes = db.get_graph().find_nodes_where([&](const auto &node) {
+        const auto nodes = db.get_graph().find_nodes_where([&](const auto &node) {
             return node.id == id;
         });
         if (nodes.empty()) {
             std::cerr << std::format("No node found with id {}", id) << std::endl;
         } else {
-            fmt::print("Found node with id {}\n{}\n", nodes.size(), nodes.front().get().toString());
+            fmt::println("Found node with id {}\n{}", nodes.size(), nodes.front().get().toString());
         }
     } catch (std::invalid_argument &e) {
         std::cerr << "Failed to select node. Node id is not valid integer" << std::endl;
@@ -421,7 +417,7 @@ auto Query::handle_update_node(Database &db, bool isComplex) const -> void {
     }
 }
 
-auto Query::handle_is_connected(Database &db, bool direct) const -> void {
+auto Query::handle_is_connected(const Database &db, const bool direct) const -> void {
     logger.debug("IS CONNECTED started");
     const auto command = this->commands.front().value;
     const auto node_ids = command | std::views::split(' ') | std::ranges::to<std::vector<std::string> >();
@@ -433,7 +429,7 @@ auto Query::handle_is_connected(Database &db, bool direct) const -> void {
         auto &graph = db.get_graph();
 
         if (direct) {
-            bool connected = std::ranges::any_of(graph.edges, [&](const Edge &edge) {
+            const bool connected = std::ranges::any_of(graph.edges, [&](const Edge &edge) {
                 return (edge.from == node1_id && edge.to == node2_id) ||
                        (edge.from == node2_id && edge.to == node1_id);
             });
@@ -460,12 +456,12 @@ auto Query::handle_is_connected(Database &db, bool direct) const -> void {
                 }
 
                 visited.insert(current);
-                for (const auto &edge: graph.edges) {
-                    if (edge.from == current && !visited.contains(edge.to)) {
-                        to_visit.push(edge.to);
+                for (const auto &[from, to]: graph.edges) {
+                    if (from == current && !visited.contains(to)) {
+                        to_visit.push(to);
                     }
-                    if (edge.to == current && !visited.contains(edge.from)) {
-                        to_visit.push(edge.from);
+                    if (to == current && !visited.contains(from)) {
+                        to_visit.push(from);
                     }
                 }
             }
@@ -517,12 +513,9 @@ auto Query::handle(Database &db) const -> void {
     if (first_command.keyword == "IS CONNECTED DIRECTLY") {
         return handle_is_connected(db, true);
     }
-    throw std::invalid_argument("Unknown command");
+    std::cerr << "Unknown command";
 }
 
 auto Query::get_commands() const -> const std::vector<Command> & {
     return commands;
 }
-
-Logger Database::logger("Database");
-Logger Query::logger("Query");

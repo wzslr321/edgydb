@@ -122,8 +122,7 @@ public:
         std::ostringstream result;
         result << "{";
         result << "\"from\":" << edge.from << ",";
-        result << "\"to\":" << edge.to << ",";
-        result << R"("relation":")" << escape_json(edge.relation) << "\"";
+        result << "\"to\":" << edge.to;
         result << "}";
 
         logger.debug(std::format("Edge serialization completed for edge with from {} to {}. Result: {}", edge.from,
