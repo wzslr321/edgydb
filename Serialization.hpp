@@ -5,15 +5,16 @@
 #define SERIALIZATION_HPP
 
 #include "Database.hpp"
+
 #include <iomanip>
 #include <sstream>
 #include <string>
 
 class Serialization {
-    static Logger logger;
+    inline static auto logger = Logger("Serialization");
 
 public:
-    static std::string escape_json(const std::string &value) {
+    static auto escape_json(const std::string &value) -> std::string {
         logger.debug(std::format("Escaping JSON for value {}", value));
 
         std::ostringstream escaped;
@@ -34,7 +35,6 @@ public:
                 case '\t': escaped << "\\t";
                     break;
                 default:
-                    // Escape non printable characters
                     if (ch >= 0 && ch <= 31) {
                         escaped << std::format("\\u{:04x}", static_cast<int>(ch));
                     } else {
@@ -47,7 +47,7 @@ public:
         return escaped.str();
     }
 
-    static std::string serialize_value(const BasicValue &value) {
+    static auto serialize_value(const BasicValue &value) -> std::string {
         logger.debug(std::format("Value serialization started for {}", value.toString()));
 
         const auto data = value.data;
@@ -68,7 +68,7 @@ public:
         return result.str();
     }
 
-    static std::string serialize_user_defined_value(const UserDefinedValue &value) {
+    static auto serialize_user_defined_value(const UserDefinedValue &value) -> std::string {
         std::ostringstream result;
         result << "{";
 
@@ -97,7 +97,7 @@ public:
         return result.str();
     }
 
-    static std::string serialize_node(const Node &node) {
+    static auto serialize_node(const Node &node) -> std::string {
         logger.debug(std::format("Node serialization started for node with id {}", node.id));
 
         std::ostringstream result;
@@ -116,7 +116,7 @@ public:
         return result.str();
     }
 
-    static std::string serialize_edge(const Edge &edge) {
+    static auto serialize_edge(const Edge &edge) -> std::string {
         logger.debug(std::format("Edge serialization started for edge from {} to ", edge.from, edge.to));
 
         std::ostringstream result;
@@ -131,7 +131,7 @@ public:
         return result.str();
     }
 
-    static std::string serialize_graph(const Graph &graph) {
+    static auto serialize_graph(const Graph &graph) -> std::string {
         logger.debug(std::format("Graph serialization started for graph with name {}", graph.name));
 
         std::ostringstream result;
@@ -154,7 +154,8 @@ public:
         return result.str();
     }
 
-    static std::string serialize_database(Database &database) {
+    static auto serialize_database(Database &database) -> std::string {
+        logger.debug(std::format("Database serialization started"));
         std::ostringstream result;
 
         auto const &graphs = database.get_graphs();
@@ -166,10 +167,9 @@ public:
         }
         result << "]" << "}";
 
+        logger.info(std::format("Database serialization completed"));
         return result.str();
     }
 };
-
-Logger Serialization::logger = Logger("Serialization");
 
 #endif //SERIALIZATION_HPP

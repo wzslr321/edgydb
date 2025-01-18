@@ -2,7 +2,7 @@
 #include <fmt/core.h>
 #include <algorithm>
 
-#include "database.hpp"
+#include "Database.hpp"
 #include "Logger.hpp"
 #include "Utils.hpp"
 

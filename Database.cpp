@@ -2,7 +2,7 @@
 // Created by Wiktor Zając on 27/11/2024.
 //
 
-#include "database.hpp"
+#include "Database.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -12,8 +12,8 @@
 #include <unordered_set>
 
 #include "Condition.hpp"
-#include "deserialization.hpp"
-#include "serialization.hpp"
+#include "Deserialization.hpp"
+#include "Serialization.hpp"
 #include "Utils.hpp"
 #include "fmt/compile.h"
 

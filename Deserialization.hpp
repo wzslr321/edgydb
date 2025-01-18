@@ -5,16 +5,15 @@
 #ifndef DESERIALIZATION_HPP
 #define DESERIALIZATION_HPP
 
+#include "Logger.hpp"
+
 #include <string>
 #include <stdexcept>
 
-#include "Logger.hpp"
-
 struct Deserialization {
-    // TODO: do that eveywehre else
     inline static auto logger = Logger("Deserialization");
 
-    static std::string parse_string(const std::string &json, size_t &pos) {
+    static auto parse_string(const std::string &json, size_t &pos) -> std::string {
         logger.debug(std::format("Deserialization of string started at pos {}", pos));
         if (json[pos] != '"') throw std::runtime_error(std::format("Expected string on pos {}", pos));
 
@@ -52,7 +51,7 @@ struct Deserialization {
         return result;
     }
 
-    static int parse_int(const std::string &json, size_t &pos) {
+    static auto parse_int(const std::string &json, size_t &pos) -> int {
         logger.debug(std::format("Deserialization for int started at pos {}", pos));
 
         size_t end_pos;
@@ -63,7 +62,7 @@ struct Deserialization {
         return value;
     }
 
-    static BasicValue parse_value(const std::string &json, size_t &pos) {
+    static auto parse_value(const std::string &json, size_t &pos) -> BasicValue {
         logger.debug(std::format("Deserialization for BasicValue started at pos {}", pos));
         while (pos < json.size() && isspace(json[pos])) ++pos;
 
@@ -87,7 +86,7 @@ struct Deserialization {
         throw std::runtime_error("Invalid value in JSON");
     }
 
-    static UserDefinedValue parse_user_defined_value(const std::string &json, size_t &pos) {
+    static auto parse_user_defined_value(const std::string &json, size_t &pos) -> UserDefinedValue {
         logger.debug(std::format("Deserialization for UserDefinedValue started at pos {}", pos));
 
         if (json[pos] != '{') throw std::runtime_error("Expected object for UserDefinedValue");
@@ -99,7 +98,6 @@ struct Deserialization {
             if (json[pos] != ':') throw std::runtime_error("Expected ':' in UserDefinedValue");
             ++pos;
 
-            // TODO: possibly dont care about nested
             if (json[pos] == '{') {
                 UserDefinedValue value = parse_user_defined_value(json, pos);
                 data.emplace_back(key, value);
@@ -119,7 +117,7 @@ struct Deserialization {
         return UserDefinedValue(data);
     }
 
-    static Node parse_node(const std::string &json, size_t &pos) {
+    static auto parse_node(const std::string &json, size_t &pos) -> Node {
         logger.debug(std::format("Deserialization for Node started at pos {}", pos));
         if (json[pos] != '{') throw std::runtime_error("Expected object");
         ++pos;
@@ -148,7 +146,7 @@ struct Deserialization {
         return node;
     }
 
-    static Edge parse_edge(const std::string &json, size_t &pos) {
+    static auto parse_edge(const std::string &json, size_t &pos) -> Edge {
         logger.debug(std::format("Deserialization for Edge started at pos {}", pos));
         if (json[pos] != '{') throw std::runtime_error("Expected object");
         ++pos;
@@ -175,7 +173,7 @@ struct Deserialization {
         return edge;
     }
 
-    static Graph parse_graph(const std::string &json, size_t &pos) {
+    static auto parse_graph(const std::string &json, size_t &pos) -> Graph {
         logger.info(std::format("Parsing of graph started at pos {}", pos));
         if (json[pos] != '{') throw std::runtime_error("Expected object");
         ++pos;
@@ -215,10 +213,10 @@ struct Deserialization {
         ++pos;
         logger.info(std::format("Parsing finished for graph with name {} containing {} nodes and {} edges", graph.name,
                                 graph.nodes.size(), graph.edges.size()));
-        return std::move(graph);
+        return graph;
     }
 
-    static std::vector<Graph> parse_graphs(const std::string &json) {
+    static auto parse_graphs(const std::string &json) -> std::vector<Graph> {
         size_t pos = 0;
         logger.info("Parsing started for graphs");
 
@@ -249,7 +247,7 @@ struct Deserialization {
         ++pos;
 
         logger.info(std::format("Parsing finished for {} graphs in total", graphs.size()));
-        return std::move(graphs);
+        return graphs;
     }
 };
 
