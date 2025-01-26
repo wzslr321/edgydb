@@ -33,3 +33,4 @@ Run with debug logging:
 ./edgydb --log-level=1
 ```
 
+> EdgyDB is a C++ project developed as part of the "Programowanie w C++" (C++ Programming) course at the Polish-Japanese Academy of Information Technology, Computer Science Major, during the 2024/2025 academic year.
