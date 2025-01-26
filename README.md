@@ -2,6 +2,17 @@
 
 A lightweight, in-memory graph database with JSON serialization support, written in modern C++23.
 
+
+---
+
+<p align = "center">
+  <b> <i> Show your support by giving a :star: </b> </i>
+</p>
+
+---
+
+
+
 ## Features
 
 - Graph-based data structure with nodes and edges
