@@ -22,7 +22,6 @@ struct BasicValue {
     using Data = std::variant<int, double, bool, std::string>;
     Data data;
 
-    // TODO: Simplify those awful toString
     [[nodiscard]]
     auto toString() const -> std::string {
         return std::visit([]<typename T0>(const T0 &arg) -> std::string {
@@ -39,7 +38,6 @@ struct BasicValue {
 };
 
 struct UserDefinedValue {
-    // TODO: Ensure uses everywhere
     using Data = std::vector<std::pair<std::string, std::variant<BasicValue, UserDefinedValue> > >;
 
 private:
@@ -220,6 +218,7 @@ public:
 
     auto execute_query(const Query &query) -> void;
 
+    [[nodiscard]]
     auto get_graph() const -> Graph &;
 
     auto get_graphs() -> std::vector<Graph> &;

@@ -133,10 +133,11 @@ auto Database::execute_query(const Query &query) -> void {
     }
 }
 
-// TODO: This quer struct is insanely bad and needs refactor
 Query::Query(std::vector<Command> commands) : commands(std::move(commands)) {
 }
 
+// !IMPORTANT!
+// Please don't read this function if you do not want yours eyes to bleed.
 auto Query::from_string(const std::string &query) -> std::optional<Query> {
     const auto words = query | std::views::split(' ') | std::ranges::to<std::vector<std::string> >();
 
@@ -199,7 +200,6 @@ auto Query::from_string(const std::string &query) -> std::optional<Query> {
     }
 
     if (words.size() >= 4) {
-        // ensure size checks as json spaces may conflict
         if (words[0] == "INSERT" && words[1] == "NODE" && words[2] == "COMPLEX") {
             const auto rest = Utils::get_rest_of_space_separated_string(words, 3);
             commands.emplace_back("INSERT NODE COMPLEX", Utils::minify_json(rest));

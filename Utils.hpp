@@ -41,7 +41,6 @@ struct Utils {
         return {start, end + 1};
     }
 
-    // TODO: ensure everywhere _ case
     static auto remove_consecutive_spaces(const std::string_view input) -> std::string {
         const auto trimmed = trim(input);
         std::string result;

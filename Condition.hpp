@@ -87,7 +87,6 @@ struct ConditionGroup {
     std::vector<LogicalOperator> operators;
 };
 
-// TODO: Possibly move to separate Condition.cpp to omit inline specifier
 inline auto parse_conditions(const std::string &condition_str) -> ConditionGroup {
     auto group = ConditionGroup{};
     auto stream = std::istringstream(condition_str);

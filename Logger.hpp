@@ -55,7 +55,6 @@ public:
         print_with_color("INFO", fmt::color::light_green, message);
     }
 
-    // TODO: Possibly remove as it is not used as of now
     auto warning(const std::string &message) const -> void {
         print_with_color("WARNING", fmt::color::yellow, message);
     }

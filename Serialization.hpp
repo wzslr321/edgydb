@@ -80,7 +80,6 @@ public:
             std::visit(
                 [&result]<typename U>(const U &v) {
                     using T = std::remove_cvref_t<U>;
-                    // replace other is_same with same_as
                     if constexpr (std::same_as<T, BasicValue>) {
                         result << serialize_value(v);
                     } else if constexpr (std::same_as<T, UserDefinedValue>) {

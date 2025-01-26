@@ -2,13 +2,14 @@ cmake_minimum_required(VERSION 3.30)
 project(edgydb)
 
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_executable(edgydb main.cpp database.cpp database.hpp
-        serialization.hpp
-        deserialization.hpp
+add_executable(edgydb main.cpp Database.cpp Database.hpp
+        Serialization.hpp
+        Deserialization.hpp
         Logger.hpp
         Utils.hpp
-        condition.hpp
+        Condition.hpp
 )
 
 include(FetchContent)
