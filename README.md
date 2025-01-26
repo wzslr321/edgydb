@@ -11,8 +11,6 @@ A lightweight, in-memory graph database with JSON serialization support, written
 
 ---
 
-
-
 ## Features
 
 - Graph-based data structure with nodes and edges
@@ -21,6 +19,9 @@ A lightweight, in-memory graph database with JSON serialization support, written
 - JSON serialization/deserialization for persistence
 - REPL interface with command-line support
 - Colored logging system with debug levels
+
+> Note: Some of the code was written fast, to meet the deadline, so it is far from ideal. The support for JSON serialization/deserialization and query parsing
+> was build purely to support my specific needs, so it is not generic as it should be. Hopefully I will find some time to refactor it.
 
 ## Building
 
